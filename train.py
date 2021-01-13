@@ -141,7 +141,8 @@ if __name__ == "__main__":
     # Construct training datasets.
     dataset_train = build_dataset(train_files,
                                   batch_size=args.batch_size,
-                                  training=True)
+                                  training=True,
+                                  buffer_size=4096)
 
     # Construct dataset for validation. The loss value from this dataset will be
     # used to decide which checkpoint should be preserved.
