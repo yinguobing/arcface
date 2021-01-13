@@ -109,7 +109,7 @@ if __name__ == "__main__":
         if not restored:
             print("Warning: Model not restored from any checkpoint.")
         print("Saving model to {} ...".format(export_dir))
-        model.save(export_dir)
+        base_model.save(export_dir)
         print("Model saved at: {}".format(export_dir))
         quit()
 
