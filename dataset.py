@@ -2,6 +2,7 @@
 and testing data."""
 
 import tensorflow as tf
+from preprocessing import normalize
 
 
 def build_dataset(tfrecord_file,
@@ -33,8 +34,13 @@ def build_dataset(tfrecord_file,
 
     # Define a helper function to decode the tf-example. This function will be
     # called by map() later.
-    def _parse_function(example_proto):
-        return tf.io.parse_single_example(example_proto, feature_description)
+    def _parse_function(example):
+        features = tf.io.parse_single_example(example, feature_description)
+        image_decoded = tf.image.decode_jpeg(features['image/encoded'])
+        image_normalized = normalize(image_decoded)
+        label = features['label']
+
+        return image_normalized, label
 
     # Now construct the dataset from tfrecord file.
     dataset = tf.data.TFRecordDataset(tfrecord_file)
