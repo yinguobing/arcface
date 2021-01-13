@@ -97,7 +97,8 @@ if __name__ == "__main__":
     # Then build the second model for softmax training.
     model = keras.Sequential([keras.Input(input_shape),
                               base_model,
-                              keras.layers.Dense(num_ids)],)
+                              keras.layers.Dense(num_ids)], 
+                              name="training_model")
 
     # TODO: Build model for arcloss.
 
