@@ -1,3 +1,6 @@
 [submodule "models"]
 	path = models
 	url = https://github.com/yinguobing/models.git
+[submodule "utils/tfrecord_operator"]
+	path = utils/tfrecord_operator
+	url = https://github.com/yinguobing/tfrecord_operator.git
