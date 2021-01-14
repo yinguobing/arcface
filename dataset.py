@@ -7,13 +7,16 @@ from preprocessing import normalize
 
 def build_dataset(tfrecord_file,
                   batch_size,
+                  one_hot_depth,
                   training=False,
-                  buffer_size=65536):
+                  buffer_size=4096):
     """Generate parsed TensorFlow dataset.
 
     Args:
         tfrecord_file: the tfrecord file path.
         batch_size: batch size.
+        one_hot_depth: the depth for one hot encoding, usually the number of 
+            classes.
         training: a boolean indicating whether the dataset will be used for
             training.
         buffer_size: hwo large the buffer is for shuffling the samples.
@@ -36,14 +39,15 @@ def build_dataset(tfrecord_file,
     # called by map() later.
     def _parse_function(example):
         features = tf.io.parse_single_example(example, feature_description)
-        image_decoded = tf.image.decode_jpeg(features['image/encoded'])
-        image_normalized = normalize(image_decoded)
-        label = features['label']
+        image = tf.image.decode_jpeg(features['image/encoded'])
+        image = normalize(image)
+        label = tf.one_hot(features['label'], depth=one_hot_depth,
+                           dtype=tf.float32)
 
-        return image_normalized, label
+        return image, label
 
-    # Now construct the dataset from tfrecord file.
-    dataset = tf.data.TFRecordDataset(tfrecord_file)
+    # Now construct the dataset from tfrecord file and make it indefinite.
+    dataset = tf.data.TFRecordDataset(tfrecord_file).repeat()
 
     # Parse the dataset to get samples.
     dataset = dataset.map(_parse_function, num_parallel_calls=autotune)
