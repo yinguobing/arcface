@@ -70,6 +70,32 @@ def hrnet_v2(input_shape, output_size, width=18, name="hrnetv2"):
     return model
 
 
+class ArcLayer(keras.layers.Layer):
+    """Custom layer for ArcFace."""
+
+    def __init__(self, embedding_size, num_ids, trainable, name, dtype, dynamic, **kwargs):
+        super(ArcLayer, self).__init__(trainable=trainable,
+                                       name=name, dtype=dtype, dynamic=dynamic, **kwargs)
+        self.embedding_size = embedding_size
+        self.num_ids = num_ids
+
+    def build(self, input_shape):
+        self.w = self.add_weight(shape=[self.embedding_size, self.num_ids],
+                                 dtype=tf.float32,
+                                 initializer=keras.initializers.HeNormal(),
+                                 trainable=True)
+
+    def call(self, inputs):
+        self.w = tf.nn.l2_normalize(self.w, axis=0)
+        return tf.matmul(inputs, self.w, name="cos_t")
+
+    def get_config(self):
+        config = super().get_config()
+        config.update({"embedding_size": self.embedding_size,
+                       "num_ids": self.num_ids})
+        return config
+
+
 if __name__ == "__main__":
     net = hrnet_v2((112, 112, 3), 256)
     x = tf.random.uniform((8, 112, 112, 3))
