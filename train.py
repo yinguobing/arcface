@@ -43,8 +43,20 @@ def restore_checkpoint(checkpoint_dir, model):
         print("Checkpoint restored: {}".format(latest_checkpoint))
         return True
     else:
-        print("Checkpoint not found. Model weights will be initialized randomly.")
+        print("WARNING: Checkpoint not found. Model weights will be initialized randomly.")
         return False
+
+
+def export(model, export_dir):
+    """Export the model in saved_model format.
+
+    Args:
+        model: the keras model to be saved.
+        export_dir: the direcotry where the model will be saved.
+    """
+    print("Saving model to {} ...".format(export_dir))
+    model.save(export_dir)
+    print("Model saved at: {}".format(export_dir))
 
 
 if __name__ == "__main__":
@@ -93,7 +105,7 @@ if __name__ == "__main__":
     # training: 1, training with softmax loss; 2, training with arcloss. This
     # means not only different loss functions but also fragmented models.
 
-    # First model is base model which output the face embeddings.
+    # First model is base model which outputs the face embeddings.
     base_model = hrnet_v2(input_shape=input_shape, output_size=embedding_size,
                           width=18, name="embedding_model")
 
@@ -107,22 +119,18 @@ if __name__ == "__main__":
     # TODO: Build model for arcloss.
 
     # Model built. Restore the latest model if checkpoints are available.
-    restored = restore_checkpoint(checkpoint_dir, model)
+    restore_checkpoint(checkpoint_dir, model)
 
     # If required by user input, save the model and quit training.
     if args.export_only:
-        if not restored:
-            print("Warning: Model not restored from any checkpoint.")
-        print("Saving model to {} ...".format(export_dir))
-        base_model.save(export_dir)
-        print("Model saved at: {}".format(export_dir))
+        export(base_model, export_dir)
         quit()
 
     # Finally, it's time to train the model.
 
     # Compile the model and print the model summary.
     model.compile(optimizer=keras.optimizers.Adam(),
-                    metrics = [keras.metrics.CategoricalAccuracy()],
+                  metrics=[keras.metrics.CategoricalAccuracy()],
                   loss=keras.losses.CategoricalCrossentropy())
     model.summary()
 
