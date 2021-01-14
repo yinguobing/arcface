@@ -8,9 +8,11 @@ from tensorflow import keras
 
 from dataset import build_dataset
 from losses import ArcLoss
-from network import hrnet_v2
+from network import hrnet_v2, ArcLayer
 
 parser = ArgumentParser()
+parser.add_argument("--softmax", default=False, type=bool,
+                    help="Training with softmax loss.")
 parser.add_argument("--epochs", default=60, type=int,
                     help="Number of training epochs.")
 parser.add_argument("--initial_epoch", default=0, type=int,
@@ -109,14 +111,22 @@ if __name__ == "__main__":
     base_model = hrnet_v2(input_shape=input_shape, output_size=embedding_size,
                           width=18, name="embedding_model")
 
-    # Then build the second model for softmax training.
-    model = keras.Sequential([keras.Input(input_shape),
-                              base_model,
-                              keras.layers.Dense(num_ids),
-                              keras.layers.Softmax()],
-                             name="training_model")
-
-    # TODO: Build model for arcloss.
+    # Then build the second model for training.
+    if args.softmax:
+        print("Building training model with softmax loss...")
+        model = keras.Sequential([keras.Input(input_shape),
+                                  base_model,
+                                  keras.layers.Dense(num_ids),
+                                  keras.layers.Softmax()],
+                                 name="training_model")
+        loss_fun = keras.losses.CategoricalCrossentropy()
+    else:
+        print("Building training model with Arc loss...")
+        model = keras.Sequential([keras.Input(input_shape),
+                                  base_model,
+                                  ArcLayer(embedding_size, num_ids)],
+                                 name="training_model")
+        loss_fun = ArcLoss()
 
     # Model built. Restore the latest model if checkpoints are available.
     restore_checkpoint(checkpoint_dir, model)
@@ -131,7 +141,7 @@ if __name__ == "__main__":
     # Compile the model and print the model summary.
     model.compile(optimizer=keras.optimizers.Adam(),
                   metrics=[keras.metrics.CategoricalAccuracy()],
-                  loss=keras.losses.CategoricalCrossentropy())
+                  loss=loss_fun)
     model.summary()
 
     # All done. The following code will setup and start the training.
