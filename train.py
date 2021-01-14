@@ -149,7 +149,7 @@ if __name__ == "__main__":
     # Save a checkpoint. This could be used to resume training.
     callback_checkpoint = keras.callbacks.ModelCheckpoint(
         filepath=os.path.join(checkpoint_dir, name),
-        monitor='loss',
+        monitor='val_accuracy',
         save_weights_only=True,
         verbose=1,
         save_best_only=True)
