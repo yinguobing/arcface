@@ -86,6 +86,9 @@ if __name__ == "__main__":
     # Log directory will keep training logs like loss/accuracy curves.
     log_dir = os.path.join("logs", name)
 
+    # How many steps are there in one epoch?
+    steps_per_epoch = 256
+
     # All sets. Now it's time to build the model. There are two steps in ArcFace
     # training: 1, training with softmax loss; 2, training with arcloss. This
     # means not only different loss functions but also fragmented models.
@@ -97,8 +100,9 @@ if __name__ == "__main__":
     # Then build the second model for softmax training.
     model = keras.Sequential([keras.Input(input_shape),
                               base_model,
-                              keras.layers.Dense(num_ids)], 
-                              name="training_model")
+                              keras.layers.Dense(num_ids),
+                              keras.layers.Softmax()],
+                             name="training_model")
 
     # TODO: Build model for arcloss.
 
@@ -118,23 +122,24 @@ if __name__ == "__main__":
 
     # Compile the model and print the model summary.
     model.compile(optimizer=keras.optimizers.Adam(),
-                  loss=ArcLoss(num_ids, use_softmax=True))
+                    metrics = [keras.metrics.CategoricalAccuracy()],
+                  loss=keras.losses.CategoricalCrossentropy())
     model.summary()
 
-    # All done. The following code will setup and start the trainign.
+    # All done. The following code will setup and start the training.
 
     # Save a checkpoint. This could be used to resume training.
     callback_checkpoint = keras.callbacks.ModelCheckpoint(
         filepath=os.path.join(checkpoint_dir, name),
+        monitor='loss',
         save_weights_only=True,
         verbose=1,
         save_best_only=True)
 
     # Visualization in TensorBoard
-    callback_tensorboard = keras.callbacks.TensorBoard(log_dir=log_dir,
-                                                       histogram_freq=1024,
-                                                       write_graph=True,
-                                                       update_freq='epoch')
+    callback_tensorboard = keras.callbacks.TensorBoard(
+        log_dir=log_dir,
+        write_graph=True)
 
     # List all the callbacks.
     callbacks = [callback_checkpoint, callback_tensorboard]
@@ -142,6 +147,7 @@ if __name__ == "__main__":
     # Construct training datasets.
     dataset_train = build_dataset(train_files,
                                   batch_size=args.batch_size,
+                                  one_hot_depth=num_ids,
                                   training=True,
                                   buffer_size=4096)
 
@@ -150,14 +156,17 @@ if __name__ == "__main__":
     if val_files:
         dataset_val = build_dataset(val_files,
                                     batch_size=args.batch_size,
-                                    training=False)
+                                    one_hot_depth=num_ids,
+                                    training=False,
+                                    buffer_size=4096)
     else:
-        dataset_val = dataset_train.take(int(512/args.batch_size))
-        dataset_train = dataset_train.skip(int(512/args.batch_size))
+        dataset_val = dataset_train.take(int(4096/args.batch_size))
+        dataset_train = dataset_train.skip(int(4096/args.batch_size))
 
     # Start training loop.
     model.fit(dataset_train,
               validation_data=dataset_val,
+              steps_per_epoch=steps_per_epoch,
               epochs=args.epochs,
               callbacks=callbacks,
               initial_epoch=args.initial_epoch)
