@@ -101,7 +101,7 @@ if __name__ == "__main__":
     log_dir = os.path.join("logs", name)
 
     # How many steps are there in one epoch?
-    steps_per_epoch = 256
+    steps_per_epoch = 32
 
     # All sets. Now it's time to build the model. There are two steps in ArcFace
     # training: 1, training with softmax loss; 2, training with arcloss. This
@@ -149,7 +149,7 @@ if __name__ == "__main__":
     # Save a checkpoint. This could be used to resume training.
     callback_checkpoint = keras.callbacks.ModelCheckpoint(
         filepath=os.path.join(checkpoint_dir, name),
-        monitor='val_accuracy',
+        monitor='categorical_accuracy',
         save_weights_only=True,
         verbose=1,
         save_best_only=True)
