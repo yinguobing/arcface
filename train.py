@@ -101,7 +101,7 @@ if __name__ == "__main__":
     log_dir = os.path.join("logs", name)
 
     # How many steps are there in one epoch?
-    steps_per_epoch = 32
+    steps_per_epoch = 512
 
     # All sets. Now it's time to build the model. There are two steps in ArcFace
     # training: 1, training with softmax loss; 2, training with arcloss. This
