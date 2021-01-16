@@ -73,9 +73,8 @@ def hrnet_v2(input_shape, output_size, width=18, name="hrnetv2"):
 class ArcLayer(keras.layers.Layer):
     """Custom layer for ArcFace."""
 
-    def __init__(self, embedding_size, num_ids, trainable, name, dtype, dynamic, **kwargs):
-        super(ArcLayer, self).__init__(trainable=trainable,
-                                       name=name, dtype=dtype, dynamic=dynamic, **kwargs)
+    def __init__(self, embedding_size, num_ids, **kwargs):
+        super(ArcLayer, self).__init__(**kwargs)
         self.embedding_size = embedding_size
         self.num_ids = num_ids
 
