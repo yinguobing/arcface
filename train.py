@@ -43,7 +43,7 @@ def restore_checkpoint(checkpoint_dir, model):
     latest_checkpoint = tf.train.latest_checkpoint(checkpoint_dir)
     if latest_checkpoint:
         print("Checkpoint found: {}, restoring...".format(latest_checkpoint))
-        model.load_weights(latest_checkpoint)
+        tf.train.Checkpoint(model).restore(os.path.join(checkpoint_dir, name))
         print("Checkpoint restored: {}".format(latest_checkpoint))
         return True
     else:
