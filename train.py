@@ -19,6 +19,8 @@ parser.add_argument("--initial_epoch", default=0, type=int,
                     help="From which epochs to resume training.")
 parser.add_argument("--batch_size", default=128, type=int,
                     help="Training batch size.")
+parser.add_argument("--steps_per_epoch", default=512, type=int,
+                    help="The number of steps for each epoch.")
 parser.add_argument("--export_only", default=False, type=bool,
                     help="Save the model without training.")
 args = parser.parse_args()
@@ -101,7 +103,7 @@ if __name__ == "__main__":
     log_dir = os.path.join("logs", name)
 
     # How many steps are there in one epoch?
-    steps_per_epoch = 512
+    steps_per_epoch = args.steps_per_epoch
 
     # All sets. Now it's time to build the model. There are two steps in ArcFace
     # training: 1, training with softmax loss; 2, training with arcloss. This
