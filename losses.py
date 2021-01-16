@@ -27,7 +27,7 @@ class ArcLoss(tf.keras.losses.Loss):
         else:
             fc7_onehot = fc7 * mapping_label_onehot
             cos_t = fc7_onehot
-            t = tf.math.arccos(cos_t)
+            t = tf.math.acos(cos_t)
 
             if self.m1 != 1.0:
                 t = t * self.m1

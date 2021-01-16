@@ -83,7 +83,9 @@ class ArcLayer(keras.layers.Layer):
                                  dtype=tf.float32,
                                  initializer=keras.initializers.HeNormal(),
                                  trainable=True)
+        self.built = True
 
+    @tf.function
     def call(self, inputs):
         self.w = tf.nn.l2_normalize(self.w, axis=0)
         return tf.matmul(inputs, self.w, name="cos_t")
