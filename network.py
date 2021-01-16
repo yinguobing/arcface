@@ -82,7 +82,8 @@ class ArcLayer(keras.layers.Layer):
         self.w = self.add_weight(shape=[self.embedding_size, self.num_ids],
                                  dtype=tf.float32,
                                  initializer=keras.initializers.HeNormal(),
-                                 trainable=True)
+                                 trainable=True,
+                                 name='w')
         self.built = True
 
     @tf.function
