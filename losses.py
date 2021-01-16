@@ -20,31 +20,20 @@ class ArcLoss(tf.keras.losses.Loss):
     def call(self, y_true, y_pred):
         mapping_label_onehot = y_true
         fc7 = y_pred
-        
+
         if self.m1 == 1.0 and self.m2 == 0.0:
             _one_hot = mapping_label_onehot * self.m3
             fc7 = fc7 - _one_hot
         else:
             fc7_onehot = fc7 * mapping_label_onehot
-            cos_t = fc7_onehot
-            t = tf.math.acos(cos_t)
-
-            if self.m1 != 1.0:
-                t = t * self.m1
-
-            if self.m2 != 0.0:
-                t = t + self.m2
-
-            margin_cos = tf.math.cos(t)
-            if self.m3 != 0.0:
-                margin_cos = margin_cos - self.m3
-
-            margin_fc7 = margin_cos
-            margin_fc7_onehot = margin_fc7 * mapping_label_onehot
-            diff = margin_fc7_onehot - fc7_onehot
-
+            t = tf.math.acos(fc7_onehot)
+            fc7_margin = tf.math.cos(t * self.m1 + self.m2) - self.m3
+            fc7_margin_onehot = fc7_margin * mapping_label_onehot
+            diff = fc7_margin_onehot - fc7_onehot
             fc7 = fc7 + diff
 
         fc7 = fc7 * self.scale
 
-        return fc7
+        loss = tf.nn.softmax_cross_entropy_with_logits(y_true, fc7)
+
+        return loss
