@@ -126,7 +126,7 @@ if __name__ == "__main__":
         print("Building training model with Arc loss...")
         model = keras.Sequential([keras.Input(input_shape),
                                   base_model,
-                                  ArcLayer(embedding_size, num_ids)],
+                                  ArcLayer(num_ids)],
                                  name="training_model")
         loss_fun = ArcLoss()
 
