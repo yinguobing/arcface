@@ -6,6 +6,52 @@ from tensorflow.keras import Model, layers
 from models.hrnet import hrnet_body
 
 
+class L2Normalization(keras.layers.Layer):
+    """This layer normalizes the inputs with l2 normalization."""
+
+    def __init__(self, **kwargs):
+        super(L2Normalization, self).__init__(**kwargs)
+
+    @tf.function
+    def call(self, inputs):
+        inputs = tf.nn.l2_normalize(inputs, axis=1)
+
+        return inputs
+
+    def get_config(self):
+        config = super().get_config()
+        return config
+
+
+class ArcLayer(keras.layers.Layer):
+    """Custom layer for ArcFace.
+
+    This layer is equivalent a dense layer except the weights are normalized.
+    """
+
+    def __init__(self, units, **kwargs):
+        super(ArcLayer, self).__init__(**kwargs)
+        self.units = units
+
+    def build(self, input_shape):
+        self.kernel = self.add_weight(shape=[input_shape[-1], self.units],
+                                      dtype=tf.float32,
+                                      initializer=keras.initializers.HeNormal(),
+                                      trainable=True,
+                                      name='kernel')
+        self.built = True
+
+    @tf.function
+    def call(self, inputs):
+        weights = tf.nn.l2_normalize(self.kernel, axis=0)
+        return tf.matmul(inputs, weights)
+
+    def get_config(self):
+        config = super().get_config()
+        config.update({"units": self.units})
+        return config
+
+
 def hrnet_stem(filters=64):
     """The stem part of the network."""
     stem_layers = [layers.Conv2D(filters, 3, 2, 'same'),
@@ -31,7 +77,7 @@ def hrnet_heads(input_channels=56, output_size=256):
                     layers.Activation('relu'),
                     layers.GlobalAveragePooling2D(),
                     layers.Dense(output_size),
-                    layers.LayerNormalization()]
+                    L2Normalization()]
 
     def forward(inputs):
         scaled = [f(x) for f, x in zip(up_scale_layers, inputs[1:])]
@@ -68,34 +114,6 @@ def hrnet_v2(input_shape, output_size, width=18, name="hrnetv2"):
     model = keras.Model(inputs=inputs, outputs=outputs, name=name)
 
     return model
-
-
-class ArcLayer(keras.layers.Layer):
-    """Custom layer for ArcFace."""
-
-    def __init__(self, embedding_size, num_ids, **kwargs):
-        super(ArcLayer, self).__init__(**kwargs)
-        self.embedding_size = embedding_size
-        self.num_ids = num_ids
-
-    def build(self, input_shape):
-        self.w = self.add_weight(shape=[self.embedding_size, self.num_ids],
-                                 dtype=tf.float32,
-                                 initializer=keras.initializers.HeNormal(),
-                                 trainable=True,
-                                 name='w')
-        self.built = True
-
-    @tf.function
-    def call(self, inputs):
-        self.w = tf.nn.l2_normalize(self.w, axis=0)
-        return tf.matmul(inputs, self.w, name="cos_t")
-
-    def get_config(self):
-        config = super().get_config()
-        config.update({"embedding_size": self.embedding_size,
-                       "num_ids": self.num_ids})
-        return config
 
 
 if __name__ == "__main__":
