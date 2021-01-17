@@ -89,13 +89,15 @@ def hrnet_heads(input_channels=56, output_size=256):
     return forward
 
 
-def hrnet_v2(input_shape, output_size, width=18, name="hrnetv2"):
+def hrnet_v2(input_shape, output_size, width=18, trainable=True, name="hrnetv2"):
     """This function returns a keras model of HRNetV2.
 
     Args:
-        width: the model hyperparameter width.
+        input_shape: the shape of the inputs.
         output_size: size of output nodes. This is considered as the size of the 
             face embeddings.
+        width: the model hyperparameter width.
+        trainable: True if the model is open for traning.
 
     Returns:
         a keras model.
@@ -111,7 +113,8 @@ def hrnet_v2(input_shape, output_size, width=18, name="hrnetv2"):
                           output_size=output_size)(x)
 
     # Construct the model and return it.
-    model = keras.Model(inputs=inputs, outputs=outputs, name=name)
+    model = keras.Model(inputs=inputs, outputs=outputs,
+                        name=name, trainable=trainable)
 
     return model
 
