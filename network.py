@@ -77,7 +77,7 @@ def hrnet_heads(input_channels=56, output_size=256):
                     layers.Activation('relu'),
                     layers.GlobalAveragePooling2D(),
                     layers.Dense(output_size),
-                    L2Normalization()]
+                    layers.BatchNormalization()]
 
     def forward(inputs):
         scaled = [f(x) for f, x in zip(up_scale_layers, inputs[1:])]
