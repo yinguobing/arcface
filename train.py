@@ -189,7 +189,7 @@ if __name__ == "__main__":
     # training samples when resume training.
     if args.initial_epoch != 0:
         skip_count = args.initial_epoch * args.steps_per_epoch
-        dataset_train.skip(skip_count)
+        dataset_train = dataset_train.skip(skip_count)
         print("Skipping data steps previously encountered: {}".format(skip_count))
 
     # Start training loop.
