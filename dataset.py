@@ -49,12 +49,12 @@ def build_dataset(tfrecord_file,
     # Now construct the dataset from tfrecord file and make it indefinite.
     dataset = tf.data.TFRecordDataset(tfrecord_file).repeat()
 
-    # Parse the dataset to get samples.
-    dataset = dataset.map(_parse_function, num_parallel_calls=autotune)
-
     # Shuffle the data if training.
     if training:
         dataset = dataset.shuffle(buffer_size)
+
+    # Parse the dataset to get samples.
+    dataset = dataset.map(_parse_function, num_parallel_calls=autotune)
 
     # Batch the data.
     dataset = dataset.batch(batch_size)
