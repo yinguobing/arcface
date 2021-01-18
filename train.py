@@ -183,6 +183,15 @@ if __name__ == "__main__":
         dataset_val = dataset_train.take(int(4096/args.batch_size))
         dataset_train = dataset_train.skip(int(4096/args.batch_size))
 
+    # The MS1M dataset contains millions of image samples. If training was
+    # frequently interupted, the next training loop will always restart with
+    # same training date from the dataset begining. To avoid this, skip adequate
+    # training samples when resume training.
+    if args.initial_epoch != 0:
+        skip_count = args.initial_epoch * args.steps_per_epoch
+        dataset_train.skip(skip_count)
+        print("Skipping data steps previously encountered: {}".format(skip_count))
+
     # Start training loop.
     model.fit(dataset_train,
               validation_data=dataset_val,
