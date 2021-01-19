@@ -74,7 +74,7 @@ def shuffle(record_file, rounds=1):
         record_file: the target file to be shuffled.
         rounds: number of rounds the file will be shuffled.
     """
-    assert(rounds >= 1, "Rounds should be larger than or equal to 1.")
+    assert rounds >= 1, "Rounds should be larger than or equal to 1."
 
     output_file = record_file.rpartition('.')[0]+'_shuffled.record'
     temp_pair = [record_file.rpartition('.')[0]+'_0.tmp',
