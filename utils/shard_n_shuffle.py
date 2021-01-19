@@ -1,18 +1,30 @@
-"""Fully shuffle the sample in the TFRecord file."""
+"""Fully shuffle the samples in the TFRecord file.
+
+The shuffling process required adequate free spaces that should be more than 
+double of the TFRecord file size. Keep this in mind or you may get a incomplete
+dataset compared with the original one.
+"""
 import numpy as np
 import tensorflow as tf
 import time
+import os
 
-if __name__ == "__main__":
-    # Setup file paths.
-    record_file = "/home/robin/data/face/faces_ms1m-refine-v2_112x112/faces_emore/train_0.record"
-    shuffled_file = record_file.rpartition('.')[0]+'_shuffled.record'
 
+def shuffle_once(input_file, output_file):
+    """Make a new record file with shuffled samples from the input record file.
+
+    Args:
+        record_file: the target file to be shuffled.
+        rounds: number of rounds the file will be shuffled.
+
+    Returns:
+        the shuffled record file path.
+    """
     # Construct TFRecord file writer.
-    writer = tf.io.TFRecordWriter(shuffled_file)
+    writer = tf.io.TFRecordWriter(output_file)
 
     # Read in the dataset.
-    dataset = tf.data.TFRecordDataset(record_file)
+    dataset = tf.data.TFRecordDataset(input_file)
 
     # Evenly split the dataset shards.
     num_shards = np.random.randint(100, 300)
@@ -53,3 +65,43 @@ if __name__ == "__main__":
         time.strftime("%H:%M:%S", time.gmtime(time.time()-starting))))
 
     writer.close()
+
+
+def shuffle(record_file, rounds=1):
+    """Shuffle the record file N times.
+
+    Args:
+        record_file: the target file to be shuffled.
+        rounds: number of rounds the file will be shuffled.
+    """
+    assert(rounds >= 1, "Rounds should be larger than or equal to 1.")
+
+    output_file = record_file.rpartition('.')[0]+'_shuffled.record'
+    temp_pair = [record_file.rpartition('.')[0]+'_0.tmp',
+                 record_file.rpartition('.')[0]+'_1.tmp']
+
+    for round in range(rounds):
+        print("Round {} of total {}".format(round, rounds))
+
+        if round == 1:
+            shuffle_once(record_file, temp_pair[1])
+        else:
+            temp_pair.reverse()
+            shuffle_once(temp_pair[0], temp_pair[1])
+
+    os.rename(temp_pair[1], output_file)
+    if rounds > 1:
+        os.remove(temp_pair[0])
+
+
+if __name__ == "__main__":
+    # Where is the TFRecord file to be shuffled?
+    record_file = "/home/robin/data/face/faces_ms1m-refine-v2_112x112/faces_emore/train_0.record"
+
+    # How many times the file should be shuffled?
+    rounds = 3
+
+    # Shuffling..
+    shuffle(record_file, rounds)
+
+    print("All done.")
