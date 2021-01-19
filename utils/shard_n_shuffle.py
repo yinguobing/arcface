@@ -83,7 +83,7 @@ def shuffle(record_file, rounds=1):
     for round in range(rounds):
         print("Round {} of total {}".format(round, rounds))
 
-        if round == 1:
+        if round == 0:
             shuffle_once(record_file, temp_pair[1])
         else:
             temp_pair.reverse()
