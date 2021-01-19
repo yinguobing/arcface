@@ -1,10 +1,11 @@
 """Fully shuffle the sample in the TFRecord file."""
 import numpy as np
 import tensorflow as tf
+import time
 
 if __name__ == "__main__":
     # Setup file paths.
-    record_file = "/home/robin/data/face/faces_ms1m-refine-v2_112x112/faces_emore/train.record"
+    record_file = "/home/robin/data/face/faces_ms1m-refine-v2_112x112/faces_emore/train_0.record"
     shuffled_file = record_file.rpartition('.')[0]+'_shuffled.record'
 
     # Construct TFRecord file writer.
@@ -25,6 +26,7 @@ if __name__ == "__main__":
 
     mini_batch_indices = np.arange(num_shards)
     counter = 0
+    starting = time.time()
 
     while True:
         if mini_batch_indices.size == 0:
@@ -46,6 +48,8 @@ if __name__ == "__main__":
                 counter += 1
                 print("Sample processed: {}".format(counter), "\033[1A")
 
-    print("Total samples; {}".format(counter))
+    print("Total samples: {}".format(counter))
+    print("Elapsed time: {}".format(
+        time.strftime("%H:%M:%S", time.gmtime(time.time()-starting))))
 
     writer.close()
