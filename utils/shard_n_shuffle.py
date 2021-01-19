@@ -20,6 +20,9 @@ if __name__ == "__main__":
               for n in range(num_shards)]
 
     # Loop through every shard and collect samples shuffled.
+    print("Number of shards: {}".format(num_shards))
+    print("Shuffle buffer size: {}".format(buffer_size))
+
     mini_batch_indices = np.arange(num_shards)
     counter = 0
 
