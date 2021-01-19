@@ -1,8 +1,6 @@
 """Fully shuffle the sample in the TFRecord file."""
 import numpy as np
 import tensorflow as tf
-from tqdm import tqdm
-
 
 if __name__ == "__main__":
     # Setup file paths.
@@ -16,8 +14,8 @@ if __name__ == "__main__":
     dataset = tf.data.TFRecordDataset(record_file)
 
     # Evenly split the dataset shards.
-    num_shards = 100
-    buffer_size = 256
+    num_shards = np.random.randint(100, 300)
+    buffer_size = np.random.randint(128, 256)
     shards = [iter(dataset.shard(num_shards, n).shuffle(buffer_size).prefetch(tf.data.experimental.AUTOTUNE))
               for n in range(num_shards)]
 
@@ -46,3 +44,5 @@ if __name__ == "__main__":
                 print("Sample processed: {}".format(counter), "\033[1A")
 
     print("Total samples; {}".format(counter))
+
+    writer.close()
