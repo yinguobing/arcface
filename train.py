@@ -21,6 +21,8 @@ parser.add_argument("--batch_size", default=128, type=int,
                     help="Training batch size.")
 parser.add_argument("--steps_per_epoch", default=512, type=int,
                     help="The number of steps for each epoch.")
+parser.add_argument("--skip_data_steps", default=0, type=int,
+                    help="The number of steps to skip for dataset.")
 parser.add_argument("--export_only", default=False, type=bool,
                     help="Save the model without training.")
 args = parser.parse_args()
@@ -77,8 +79,7 @@ if __name__ == "__main__":
     # Where are the testing files?
     test_files = None
 
-    # Where are the validation files? Set `None` if no files available. Then 10%
-    # of the training files will be used as validation samples.
+    # Where are the validation files? Set `None` if no files available.
     val_files = None
 
     # What is the shape of the input image?
@@ -180,17 +181,16 @@ if __name__ == "__main__":
                                     training=False,
                                     buffer_size=4096)
     else:
-        dataset_val = dataset_train.take(int(4096/args.batch_size))
-        dataset_train = dataset_train.skip(int(4096/args.batch_size))
+        dataset_val = None
 
     # The MS1M dataset contains millions of image samples. If training was
     # frequently interupted, the next training loop will always restart with
     # same training date from the dataset begining. To avoid this, skip adequate
     # training samples when resume training.
-    if args.initial_epoch != 0:
-        skip_count = args.initial_epoch * args.steps_per_epoch
-        dataset_train = dataset_train.skip(skip_count)
-        print("Skipping data steps previously encountered: {}".format(skip_count))
+    if args.skip_data_steps != 0:
+        dataset_train = dataset_train.skip(args.skip_data_steps)
+        print("Skipping data steps previously encountered: {}".format(
+            args.skip_data_steps))
 
     # Start training loop.
     model.fit(dataset_train,
