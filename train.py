@@ -8,7 +8,7 @@ from tensorflow import keras
 
 from dataset import build_dataset
 from losses import ArcLoss
-from network import hrnet_v2, ArcLayer
+from network import L2Normalization, hrnet_v2, ArcLayer
 
 parser = ArgumentParser()
 parser.add_argument("--softmax", default=False, type=bool,
@@ -127,6 +127,7 @@ if __name__ == "__main__":
         print("Building training model with Arc loss...")
         model = keras.Sequential([keras.Input(input_shape),
                                   base_model,
+                                  L2Normalization(),
                                   ArcLayer(num_ids)],
                                  name="training_model")
         loss_fun = ArcLoss()
@@ -142,7 +143,7 @@ if __name__ == "__main__":
     # Finally, it's time to train the model.
 
     # Compile the model and print the model summary.
-    model.compile(optimizer=keras.optimizers.Adam(0.0001, amsgrad=True, epsilon=0.01),
+    model.compile(optimizer=keras.optimizers.Adam(0.001, amsgrad=True, epsilon=0.01),
                   metrics=[keras.metrics.CategoricalAccuracy()],
                   loss=loss_fun)
     model.summary()
@@ -152,7 +153,7 @@ if __name__ == "__main__":
     # Save a checkpoint. This could be used to resume training.
     callback_checkpoint = keras.callbacks.ModelCheckpoint(
         filepath=os.path.join(checkpoint_dir, name),
-        monitor='categorical_accuracy',
+        monitor='loss',
         save_weights_only=True,
         verbose=1,
         save_best_only=True)
