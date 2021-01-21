@@ -142,7 +142,7 @@ if __name__ == "__main__":
     # Finally, it's time to train the model.
 
     # Compile the model and print the model summary.
-    model.compile(optimizer=keras.optimizers.Adam(),
+    model.compile(optimizer=keras.optimizers.Adam(0.0001, amsgrad=True, epsilon=0.01),
                   metrics=[keras.metrics.CategoricalAccuracy()],
                   loss=loss_fun)
     model.summary()
