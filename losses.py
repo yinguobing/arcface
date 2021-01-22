@@ -6,34 +6,45 @@ from math import pi
 class ArcLoss(tf.keras.losses.Loss):
     """Additive angular margin loss.
 
-    Original implementation: https://github.com/deepinsight/insightface
+    Original implementation: https://github.com/luckycallor/InsightFace-tensorflow
     """
 
-    def __init__(self, margins=(1.0, 0.5, 0.0), scale=64, name="arcloss"):
+    def __init__(self, margin=0.5, scale=64, name="arcloss"):
         """Build an additive angular margin loss object for Keras model."""
         super().__init__(name=name)
-        self.m1 = margins[0]
-        self.m2 = margins[1]
-        self.m3 = margins[2]
+        self.margin = margin
         self.scale = scale
+        self.threshold = tf.math.cos(pi - margin)
+        self.cos_m = tf.math.cos(margin)
+        self.sin_m = tf.math.sin(margin)
 
+        # Safe margin: https://github.com/deepinsight/insightface/issues/108
+        self.safe_margin = self.sin_m * margin
+
+    @tf.function
     def call(self, y_true, y_pred):
-        mapping_label_onehot = y_true
-        fc7 = y_pred
 
-        if self.m1 == 1.0 and self.m2 == 0.0:
-            _one_hot = mapping_label_onehot * self.m3
-            fc7 = fc7 - _one_hot
-        else:
-            fc7_onehot = fc7 * mapping_label_onehot
-            t = tf.math.acos(fc7_onehot)
-            fc7_margin = tf.math.cos(t * self.m1 + self.m2) - self.m3
-            fc7_margin_onehot = fc7_margin * mapping_label_onehot
-            diff = fc7_margin_onehot - fc7_onehot
-            fc7 = fc7 + diff
+        # Calculate the cosine value of theta + margin.
+        cos_t = y_pred
+        sin_t = tf.math.sqrt(1 - tf.math.square(cos_t))
 
-        fc7 = fc7 * self.scale
+        cos_t_margin = tf.where(cos_t > self.threshold,
+                                cos_t * self.cos_m - sin_t * self.sin_m,
+                                cos_t - self.safe_margin)
 
-        loss = tf.nn.softmax_cross_entropy_with_logits(y_true, fc7)
+        # The labels here had already been onehot encoded.
+        mask = y_true
+        cos_t_onehot = cos_t * mask
+        cos_t_margin_onehot = cos_t_margin * mask
 
-        return loss
+        # Calculate the final scaled logits.
+        logits = (cos_t + cos_t_margin_onehot - cos_t_onehot) * self.scale
+
+        losses = tf.nn.softmax_cross_entropy_with_logits(y_true, logits)
+
+        return losses
+
+    def get_config(self):
+        config = super(ArcLoss, self).get_config()
+        config.update({"margin": self.margin, "scale": self.scale})
+        return config
