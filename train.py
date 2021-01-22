@@ -112,7 +112,7 @@ if __name__ == "__main__":
 
     # First model is base model which outputs the face embeddings.
     base_model = hrnet_v2(input_shape=input_shape, output_size=embedding_size,
-                          width=18, name="embedding_model")
+                          width=18, trainable=True, name="embedding_model")
 
     # Then build the second model for training.
     if args.softmax:
@@ -143,7 +143,7 @@ if __name__ == "__main__":
     # Finally, it's time to train the model.
 
     # Compile the model and print the model summary.
-    model.compile(optimizer=keras.optimizers.Adam(0.001, amsgrad=True, epsilon=0.01),
+    model.compile(optimizer=keras.optimizers.Adam(0.001, amsgrad=True),
                   metrics=[keras.metrics.CategoricalAccuracy()],
                   loss=loss_fun)
     model.summary()
