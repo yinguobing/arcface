@@ -5,6 +5,7 @@ from argparse import ArgumentParser
 
 import tensorflow as tf
 from tensorflow import keras
+from tensorflow.python.keras.backend import update
 
 from dataset import build_dataset
 from losses import ArcLoss
@@ -142,8 +143,13 @@ if __name__ == "__main__":
 
     # Finally, it's time to train the model.
 
+    # Set the learning rate schedule. We will follow the official instructions.
+    schedule = keras.optimizers.schedules.PiecewiseConstantDecay(
+        boundaries=[2e5, 3.2e5, 3.6e5],
+        values=[0.1, 0.01, 0.001, 0.0001])
+
     # Compile the model and print the model summary.
-    model.compile(optimizer=keras.optimizers.Adam(0.001, amsgrad=True),
+    model.compile(optimizer=keras.optimizers.SGD(schedule, 0.9),
                   metrics=[keras.metrics.CategoricalAccuracy()],
                   loss=loss_fun)
     model.summary()
@@ -156,11 +162,13 @@ if __name__ == "__main__":
         monitor='loss',
         save_weights_only=True,
         verbose=1,
-        save_best_only=True)
+        save_best_only=True,
+        save_freq=1000)
 
     # Visualization in TensorBoard
     callback_tensorboard = keras.callbacks.TensorBoard(
         log_dir=log_dir,
+        update_freq=1000,
         write_graph=True)
 
     # List all the callbacks.
