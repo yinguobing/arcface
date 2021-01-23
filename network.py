@@ -1,7 +1,7 @@
 """This module provides the network backbone implementation."""
 import tensorflow as tf
 from tensorflow import keras
-from tensorflow.keras import Model, layers
+from tensorflow.keras import layers
 
 from models.hrnet import hrnet_body
 
@@ -29,14 +29,16 @@ class ArcLayer(keras.layers.Layer):
     This layer is equivalent a dense layer except the weights are normalized.
     """
 
-    def __init__(self, units, **kwargs):
+    def __init__(self, units, kernel_regularizer=None, **kwargs):
         super(ArcLayer, self).__init__(**kwargs)
         self.units = units
+        self.kernel_regularizer = kernel_regularizer
 
     def build(self, input_shape):
         self.kernel = self.add_weight(shape=[input_shape[-1], self.units],
                                       dtype=tf.float32,
                                       initializer=keras.initializers.HeNormal(),
+                                      regularizer=self.kernel_regularizer,
                                       trainable=True,
                                       name='kernel')
         self.built = True
@@ -48,13 +50,15 @@ class ArcLayer(keras.layers.Layer):
 
     def get_config(self):
         config = super().get_config()
-        config.update({"units": self.units})
+        config.update({"units": self.units,
+                       "kernel_regularizer": self.kernel_regularizer})
         return config
 
 
-def hrnet_stem(filters=64):
+def hrnet_stem(filters=64, kernel_regularizer=None):
     """The stem part of the network."""
-    stem_layers = [layers.Conv2D(filters, 3, 2, 'same'),
+    stem_layers = [layers.Conv2D(filters, 3, 2, 'same',
+                                 kernel_regularizer=kernel_regularizer),
                    layers.BatchNormalization(),
                    layers.Activation('relu')]
 
@@ -66,17 +70,19 @@ def hrnet_stem(filters=64):
     return forward
 
 
-def hrnet_heads(input_channels=56, output_size=256):
+def hrnet_heads(input_channels=56, output_size=256, kernel_regularizer=None):
     # Construct up sacling layers.
     scales = [2, 4, 8]
     up_scale_layers = [layers.UpSampling2D((s, s)) for s in scales]
     concatenate_layer = layers.Concatenate(axis=3)
     heads_layers = [layers.Conv2D(filters=input_channels, kernel_size=(1, 1),
-                                  strides=(1, 1), padding='same'),
+                                  strides=(1, 1), padding='same',
+                                  kernel_regularizer=kernel_regularizer),
                     layers.BatchNormalization(),
                     layers.Activation('relu'),
                     layers.GlobalAveragePooling2D(),
-                    layers.Dense(output_size),
+                    layers.Dense(output_size,
+                                 kernel_regularizer=kernel_regularizer),
                     layers.BatchNormalization()]
 
     def forward(inputs):
@@ -89,7 +95,8 @@ def hrnet_heads(input_channels=56, output_size=256):
     return forward
 
 
-def hrnet_v2(input_shape, output_size, width=18, trainable=True, name="hrnetv2"):
+def hrnet_v2(input_shape, output_size, width=18, trainable=True,
+             kernel_regularizer=None, name="hrnetv2"):
     """This function returns a keras model of HRNetV2.
 
     Args:
@@ -107,10 +114,11 @@ def hrnet_v2(input_shape, output_size, width=18, trainable=True, name="hrnetv2")
 
     # Describe the model.
     inputs = keras.Input(input_shape, dtype=tf.float32)
-    x = hrnet_stem(64)(inputs)
-    x = hrnet_body(width)(x)
+    x = hrnet_stem(64, kernel_regularizer)(inputs)
+    x = hrnet_body(width, kernel_regularizer)(x)
     outputs = hrnet_heads(input_channels=last_stage_width,
-                          output_size=output_size)(x)
+                          output_size=output_size,
+                          kernel_regularizer=kernel_regularizer)(x)
 
     # Construct the model and return it.
     model = keras.Model(inputs=inputs, outputs=outputs,

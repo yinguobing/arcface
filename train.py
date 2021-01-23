@@ -5,7 +5,6 @@ from argparse import ArgumentParser
 
 import tensorflow as tf
 from tensorflow import keras
-from tensorflow.python.keras.backend import update
 
 from dataset import build_dataset
 from losses import ArcLoss
@@ -107,20 +106,26 @@ if __name__ == "__main__":
     # How many steps are there in one epoch?
     steps_per_epoch = args.steps_per_epoch
 
+    # Any weight regularization?
+    regularizer = keras.regularizers.L2(5e-4)
+
     # All sets. Now it's time to build the model. There are two steps in ArcFace
     # training: 1, training with softmax loss; 2, training with arcloss. This
     # means not only different loss functions but also fragmented models.
 
     # First model is base model which outputs the face embeddings.
     base_model = hrnet_v2(input_shape=input_shape, output_size=embedding_size,
-                          width=18, trainable=True, name="embedding_model")
+                          width=18, trainable=True,
+                          kernel_regularizer=regularizer,
+                          name="embedding_model")
 
     # Then build the second model for training.
     if args.softmax:
         print("Building training model with softmax loss...")
         model = keras.Sequential([keras.Input(input_shape),
                                   base_model,
-                                  keras.layers.Dense(num_ids),
+                                  keras.layers.Dense(num_ids,
+                                                     kernel_regularizer=regularizer),
                                   keras.layers.Softmax()],
                                  name="training_model")
         loss_fun = keras.losses.CategoricalCrossentropy()
@@ -129,7 +134,7 @@ if __name__ == "__main__":
         model = keras.Sequential([keras.Input(input_shape),
                                   base_model,
                                   L2Normalization(),
-                                  ArcLayer(num_ids)],
+                                  ArcLayer(num_ids, regularizer)],
                                  name="training_model")
         loss_fun = ArcLoss()
 
