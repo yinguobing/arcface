@@ -19,8 +19,6 @@ parser.add_argument("--initial_epoch", default=0, type=int,
                     help="From which epochs to resume training.")
 parser.add_argument("--batch_size", default=128, type=int,
                     help="Training batch size.")
-parser.add_argument("--steps_per_epoch", default=512, type=int,
-                    help="The number of steps for each epoch.")
 parser.add_argument("--skip_data_steps", default=0, type=int,
                     help="The number of steps to skip for dataset.")
 parser.add_argument("--export_only", default=False, type=bool,
@@ -88,8 +86,11 @@ if __name__ == "__main__":
     # What is the size of the embeddings that represent the faces?
     embedding_size = 512
 
-    # How many identities do you have in the training data?
+    # How many identities do you have in the training dataset?
     num_ids = 85742
+
+    # How many examples do you have in the training dataset?
+    num_examples = 5822653
 
     # That should be sufficient for training. However if you want more
     # customization, please keep going.
@@ -104,10 +105,13 @@ if __name__ == "__main__":
     log_dir = os.path.join("logs", name)
 
     # How many steps are there in one epoch?
-    steps_per_epoch = args.steps_per_epoch
+    steps_per_epoch = num_examples // args.batch_size
 
     # Any weight regularization?
     regularizer = keras.regularizers.L2(5e-4)
+
+    # How often do you want to log and save the model, in steps?
+    frequency = 1000
 
     # All sets. Now it's time to build the model. There are two steps in ArcFace
     # training: 1, training with softmax loss; 2, training with arcloss. This
@@ -130,7 +134,7 @@ if __name__ == "__main__":
                                  name="training_model")
         loss_fun = keras.losses.CategoricalCrossentropy()
     else:
-        print("Building training model with Arc loss...")
+        print("Building training model with ARC loss...")
         model = keras.Sequential([keras.Input(input_shape),
                                   base_model,
                                   L2Normalization(),
@@ -168,12 +172,12 @@ if __name__ == "__main__":
         save_weights_only=True,
         verbose=1,
         save_best_only=True,
-        save_freq=1000)
+        save_freq=frequency)
 
     # Visualization in TensorBoard
     callback_tensorboard = keras.callbacks.TensorBoard(
         log_dir=log_dir,
-        update_freq=1000,
+        update_freq=frequency,
         write_graph=True)
 
     # List all the callbacks.
