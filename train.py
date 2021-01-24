@@ -15,8 +15,6 @@ parser.add_argument("--softmax", default=False, type=bool,
                     help="Training with softmax loss.")
 parser.add_argument("--epochs", default=60, type=int,
                     help="Number of training epochs.")
-parser.add_argument("--initial_epoch", default=0, type=int,
-                    help="From which epochs to resume training.")
 parser.add_argument("--batch_size", default=128, type=int,
                     help="Training batch size.")
 parser.add_argument("--skip_data_steps", default=0, type=int,
@@ -43,7 +41,7 @@ def restore_checkpoint(checkpoint_dir, model):
     latest_checkpoint = tf.train.latest_checkpoint(checkpoint_dir)
     if latest_checkpoint:
         print("Checkpoint found: {}, restoring...".format(latest_checkpoint))
-        tf.train.Checkpoint(model).restore(os.path.join(checkpoint_dir, name))
+        tf.train.Checkpoint(model).restore(latest_checkpoint)
         print("Checkpoint restored: {}".format(latest_checkpoint))
         return True
     else:
@@ -104,9 +102,6 @@ if __name__ == "__main__":
     # Log directory will keep training logs like loss/accuracy curves.
     log_dir = os.path.join("logs", name)
 
-    # How many steps are there in one epoch?
-    steps_per_epoch = num_examples // args.batch_size
-
     # Any weight regularization?
     regularizer = keras.regularizers.L2(5e-4)
 
@@ -142,11 +137,9 @@ if __name__ == "__main__":
                                  name="training_model")
         loss_fun = ArcLoss()
 
-    # Model built. Restore the latest model if checkpoints are available.
-    restore_checkpoint(checkpoint_dir, model)
-
     # If required by user input, save the model and quit training.
     if args.export_only:
+        restore_checkpoint(checkpoint_dir, model)
         export(base_model, export_dir)
         quit()
 
@@ -162,6 +155,16 @@ if __name__ == "__main__":
                   metrics=[keras.metrics.CategoricalAccuracy()],
                   loss=loss_fun)
     model.summary()
+
+    # Model compiled. Restore the latest model if checkpoints are available.
+    restore_checkpoint(checkpoint_dir, model)
+
+    # If training shall be resumed, where are we now?
+    global_steps = model.optimizer.iterations.numpy()
+    steps_per_epoch = num_examples // args.batch_size
+    initial_epoch = global_steps // steps_per_epoch
+    print("Resume training from global step: {}, epochs: {}".format(
+        global_steps, initial_epoch))
 
     # All done. The following code will setup and start the training.
 
@@ -216,4 +219,4 @@ if __name__ == "__main__":
               steps_per_epoch=steps_per_epoch,
               epochs=args.epochs,
               callbacks=callbacks,
-              initial_epoch=args.initial_epoch)
+              initial_epoch=initial_epoch)
