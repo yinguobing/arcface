@@ -56,6 +56,28 @@ def export(model, export_dir):
     print("Model saved at: {}".format(export_dir))
 
 
+@tf.function
+def train_step(x_batch, y_batch):
+    """Define the training step function."""
+    with tf.GradientTape() as tape:
+        # Run the forward propagation.
+        logits = model(x_batch, training=True)
+
+        # Calculate the loss value from targets and regularization.
+        loss_value = loss_fun(y_batch, logits) + sum(model.losses)
+
+    # Calculate the gradients.
+    grads = tape.gradient(loss_value, model.trainabl_weights)
+
+    # Back propagation.
+    optimizer.apply_gradients(zip(grads, model.trainable_weights))
+
+    # Calculate the accuracies.
+    metric_acc_train.update_state(y_batch, logits)
+
+    return loss_value
+
+
 if __name__ == "__main__":
     # Deep neural network training is complicated. The first thing is making
     # sure you have everything ready for training, like datasets, checkpoints,
@@ -184,16 +206,5 @@ if __name__ == "__main__":
     initial_epoch = checkpoint.last_epoch
     print("Resume training from global step: {}, epoch: {}".format(
         global_steps, initial_epoch))
-
-
-
-    # # The MS1M dataset contains millions of image samples. If training was
-    # # frequently interupted, the next training loop will always restart with
-    # # same training date from the dataset begining. To avoid this, skip adequate
-    # # training samples when resume training.
-    # if args.skip_data_steps != 0:
-    #     dataset_train = dataset_train.skip(args.skip_data_steps)
-    #     print("Skipping data steps previously encountered: {}".format(
-    #         args.skip_data_steps))
 
     # Start training loop.
