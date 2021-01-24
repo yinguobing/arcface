@@ -1,11 +1,11 @@
 """The training module for ArcFace face recognition."""
 
 import os
+from tqdm import tqdm
 from argparse import ArgumentParser
 
 import tensorflow as tf
 from tensorflow import keras
-from tensorflow.python.training.checkpoint_utils import checkpoints_iterator
 
 from dataset import build_dataset
 from losses import ArcLoss
@@ -59,6 +59,7 @@ def export(model, export_dir):
 @tf.function
 def train_step(x_batch, y_batch):
     """Define the training step function."""
+
     with tf.GradientTape() as tape:
         # Run the forward propagation.
         logits = model(x_batch, training=True)
@@ -67,7 +68,7 @@ def train_step(x_batch, y_batch):
         loss_value = loss_fun(y_batch, logits) + sum(model.losses)
 
     # Calculate the gradients.
-    grads = tape.gradient(loss_value, model.trainabl_weights)
+    grads = tape.gradient(loss_value, model.trainable_weights)
 
     # Back propagation.
     optimizer.apply_gradients(zip(grads, model.trainable_weights))
@@ -123,7 +124,7 @@ if __name__ == "__main__":
     regularizer = keras.regularizers.L2(5e-4)
 
     # How often do you want to log and save the model, in steps?
-    frequency = 1000
+    frequency = 100
 
     # All sets. Now it's time to build the model. There are two steps in ArcFace
     # training: 1, training with softmax loss; 2, training with arcloss. This
@@ -154,13 +155,6 @@ if __name__ == "__main__":
                                  name="training_model")
         loss_fun = ArcLoss()
 
-    # # Model built. This script also support model exporting if required by user
-    # # input. Now is the best time to save the model and skip training.
-    # if args.export_only:
-    #     restore_checkpoint(checkpoint_dir, model)
-    #     export(base_model, export_dir)
-    #     quit()
-
     # Construct an optimizer with learning rate schedule. We will follow the
     # official instructions.
     schedule = keras.optimizers.schedules.PiecewiseConstantDecay(
@@ -190,21 +184,55 @@ if __name__ == "__main__":
         dataset_val = None
 
     # Save a checkpoint. This could be used to resume training.
-    checkpoint = tf.train.Checkpoint(step=tf.Variable(1),
+    checkpoint = tf.train.Checkpoint(step=tf.Variable(0),
                                      last_epoch=tf.Variable(1),
+                                     last_monitor_value=tf.Variable(0.0),
                                      optimizer=optimizer,
                                      model=model,
-                                     data_iterator=iter(dataset_train))
+                                     dataset=iter(dataset_train))
     ckpt_manager = tf.train.CheckpointManager(checkpoint, checkpoint_dir, 2)
 
     # Restore the latest model if checkpoints are available.
     restore_checkpoint(checkpoint, ckpt_manager)
 
     # If training shall be resumed, where are we now?
-    global_steps = checkpoint.step
+    global_step = checkpoint.step.numpy()
     steps_per_epoch = num_examples // args.batch_size
-    initial_epoch = checkpoint.last_epoch
+    initial_step = global_step % steps_per_epoch
+    initial_epoch = checkpoint.last_epoch.numpy()
     print("Resume training from global step: {}, epoch: {}".format(
-        global_steps, initial_epoch))
+        global_step, initial_epoch))
 
     # Start training loop.
+    epochs = args.epochs - initial_epoch
+
+    for epoch in range(epochs):
+        # Make the epoch number human friendly.
+        epoch += initial_epoch
+        print("\nEpoch {}/{}".format(epoch, args.epochs))
+
+        # Visualize the training progress.
+        progress_bar = tqdm(total=steps_per_epoch, initial=initial_step)
+
+        # Iterate over the batches of the dataset
+        for x_batch, y_batch in checkpoint.dataset:
+
+            # Train for one step.
+            loss = train_step(x_batch, y_batch)
+
+            # Update the monitor value.
+            checkpoint.last_monitor_value.assign(loss)
+
+            # Update the checkpoint step counter.
+            checkpoint.step.assign_add(1)
+
+            # Update the progress bar.
+            progress_bar.update(1)
+
+            # Log and checkpoint the model.
+            if int(checkpoint.step) % frequency == 0:
+                ckpt_manager.save()
+                print("Checkpoint saved for step {}".format(int(checkpoint.step)))
+
+        # Update the checkpoint epoch counter.
+        checkpoint.last_epoch.assign_add(1)
