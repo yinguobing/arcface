@@ -5,6 +5,7 @@ from argparse import ArgumentParser
 
 import tensorflow as tf
 from tensorflow import keras
+from tensorflow.python.training.checkpoint_utils import checkpoints_iterator
 
 from dataset import build_dataset
 from losses import ArcLoss
@@ -24,29 +25,23 @@ parser.add_argument("--export_only", default=False, type=bool,
 args = parser.parse_args()
 
 
-def restore_checkpoint(checkpoint_dir, model):
+def restore_checkpoint(checkpoint, manager):
     """Restore the model from checkpoint files if available.
 
     Args:
-        checkpoint_dir: the path to the checkpoint files.
-        model: the model to be restored.
+        checkpoint: the checkpoint.
+        manager: the checkpoint manager.
 
     Returns:
         a boolean indicating whether the model was restored successfully.
     """
-    if not os.path.exists(checkpoint_dir):
-        os.makedirs(checkpoint_dir)
-        print("Checkpoint directory created: {}".format(checkpoint_dir))
-
-    latest_checkpoint = tf.train.latest_checkpoint(checkpoint_dir)
+    latest_checkpoint = manager.latest_checkpoint
     if latest_checkpoint:
         print("Checkpoint found: {}, restoring...".format(latest_checkpoint))
-        tf.train.Checkpoint(model).restore(latest_checkpoint)
+        checkpoint.restore(manager.latest_checkpoint)
         print("Checkpoint restored: {}".format(latest_checkpoint))
-        return True
     else:
-        print("WARNING: Checkpoint not found. Model weights will be initialized randomly.")
-        return False
+        print("WARNING: Checkpoint not found. Model will be initialized from scratch.")
 
 
 def export(model, export_dir):
@@ -137,54 +132,22 @@ if __name__ == "__main__":
                                  name="training_model")
         loss_fun = ArcLoss()
 
-    # If required by user input, save the model and quit training.
-    if args.export_only:
-        restore_checkpoint(checkpoint_dir, model)
-        export(base_model, export_dir)
-        quit()
+    # # Model built. This script also support model exporting if required by user
+    # # input. Now is the best time to save the model and skip training.
+    # if args.export_only:
+    #     restore_checkpoint(checkpoint_dir, model)
+    #     export(base_model, export_dir)
+    #     quit()
 
-    # Finally, it's time to train the model.
-
-    # Set the learning rate schedule. We will follow the official instructions.
+    # Construct an optimizer with learning rate schedule. We will follow the
+    # official instructions.
     schedule = keras.optimizers.schedules.PiecewiseConstantDecay(
         boundaries=[2e5, 3.2e5, 3.6e5],
         values=[0.1, 0.01, 0.001, 0.0001])
+    optimizer = keras.optimizers.SGD(schedule, 0.9)
 
-    # Compile the model and print the model summary.
-    model.compile(optimizer=keras.optimizers.SGD(schedule, 0.9),
-                  metrics=[keras.metrics.CategoricalAccuracy()],
-                  loss=loss_fun)
-    model.summary()
-
-    # Model compiled. Restore the latest model if checkpoints are available.
-    restore_checkpoint(checkpoint_dir, model)
-
-    # If training shall be resumed, where are we now?
-    global_steps = model.optimizer.iterations.numpy()
-    steps_per_epoch = num_examples // args.batch_size
-    initial_epoch = global_steps // steps_per_epoch
-    print("Resume training from global step: {}, epochs: {}".format(
-        global_steps, initial_epoch))
-
-    # All done. The following code will setup and start the training.
-
-    # Save a checkpoint. This could be used to resume training.
-    callback_checkpoint = keras.callbacks.ModelCheckpoint(
-        filepath=os.path.join(checkpoint_dir, name),
-        monitor='loss',
-        save_weights_only=True,
-        verbose=1,
-        save_best_only=True,
-        save_freq=frequency)
-
-    # Visualization in TensorBoard
-    callback_tensorboard = keras.callbacks.TensorBoard(
-        log_dir=log_dir,
-        update_freq=frequency,
-        write_graph=True)
-
-    # List all the callbacks.
-    callbacks = [callback_checkpoint, callback_tensorboard]
+    # Construct the metrics for the model.
+    metric_acc_train = keras.metrics.CategoricalAccuracy()
 
     # Construct training datasets.
     dataset_train = build_dataset(train_files,
@@ -193,7 +156,7 @@ if __name__ == "__main__":
                                   training=True,
                                   buffer_size=4096)
 
-    # Construct dataset for validation. The loss value from this dataset will be
+    # Construct dataset for validation. The loss value from this dataset can be
     # used to decide which checkpoint should be preserved.
     if val_files:
         dataset_val = build_dataset(val_files,
@@ -204,19 +167,33 @@ if __name__ == "__main__":
     else:
         dataset_val = None
 
-    # The MS1M dataset contains millions of image samples. If training was
-    # frequently interupted, the next training loop will always restart with
-    # same training date from the dataset begining. To avoid this, skip adequate
-    # training samples when resume training.
-    if args.skip_data_steps != 0:
-        dataset_train = dataset_train.skip(args.skip_data_steps)
-        print("Skipping data steps previously encountered: {}".format(
-            args.skip_data_steps))
+    # Save a checkpoint. This could be used to resume training.
+    checkpoint = tf.train.Checkpoint(step=tf.Variable(1),
+                                     last_epoch=tf.Variable(1),
+                                     optimizer=optimizer,
+                                     model=model,
+                                     data_iterator=iter(dataset_train))
+    ckpt_manager = tf.train.CheckpointManager(checkpoint, checkpoint_dir, 2)
+
+    # Restore the latest model if checkpoints are available.
+    restore_checkpoint(checkpoint, ckpt_manager)
+
+    # If training shall be resumed, where are we now?
+    global_steps = checkpoint.step
+    steps_per_epoch = num_examples // args.batch_size
+    initial_epoch = checkpoint.last_epoch
+    print("Resume training from global step: {}, epoch: {}".format(
+        global_steps, initial_epoch))
+
+
+
+    # # The MS1M dataset contains millions of image samples. If training was
+    # # frequently interupted, the next training loop will always restart with
+    # # same training date from the dataset begining. To avoid this, skip adequate
+    # # training samples when resume training.
+    # if args.skip_data_steps != 0:
+    #     dataset_train = dataset_train.skip(args.skip_data_steps)
+    #     print("Skipping data steps previously encountered: {}".format(
+    #         args.skip_data_steps))
 
     # Start training loop.
-    model.fit(dataset_train,
-              validation_data=dataset_val,
-              steps_per_epoch=steps_per_epoch,
-              epochs=args.epochs,
-              callbacks=callbacks,
-              initial_epoch=initial_epoch)
