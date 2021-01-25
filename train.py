@@ -195,6 +195,11 @@ if __name__ == "__main__":
     # Restore the latest model if checkpoints are available.
     restore_checkpoint(checkpoint, ckpt_manager)
 
+    # If training accomplished, save the base model for inference.
+    if args.export_only:
+        export(base_model, export_dir)
+        quit()
+
     # If training shall be resumed, where are we now?
     global_step = checkpoint.step.numpy()
     steps_per_epoch = num_examples // args.batch_size
