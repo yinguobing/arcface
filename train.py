@@ -75,8 +75,8 @@ def train_step(x_batch, y_batch):
     optimizer.apply_gradients(zip(grads, model.trainable_weights))
 
     # Update the metrics.
-    metric_acc_train.update_state(y_batch, logits)
-    metric_loss_train.update_state(loss_value)
+    metric_train_acc.update_state(y_batch, logits)
+    metric_train_loss.update_state(loss_value)
 
     return loss_value
 
@@ -165,9 +165,13 @@ if __name__ == "__main__":
     optimizer = keras.optimizers.SGD(schedule, 0.9)
 
     # Construct the metrics for the model.
-    metric_acc_train = keras.metrics.CategoricalAccuracy(name="train_accuracy")
-    metric_loss_train = keras.metrics.Mean(name="train_loss_mean",
+    metric_train_acc = keras.metrics.CategoricalAccuracy(name="train_accuracy")
+    metric_train_loss = keras.metrics.Mean(name="train_loss_mean",
                                            dtype=tf.float32)
+
+    # User summary writer to log the training process to TensorBoard.
+    summary_writer_train = tf.summary.create_file_writer(
+        os.path.join(log_dir, "train"))
 
     # Construct training datasets.
     dataset_train = build_dataset(train_files,
@@ -233,10 +237,8 @@ if __name__ == "__main__":
             # Train for one step.
             loss = train_step(x_batch, y_batch)
 
-            # Update the monitor value.
-            checkpoint.last_monitor_value.assign(metric_loss_train.result())
-
-            # Update the checkpoint step counter.
+            # Update the checkpoint.
+            checkpoint.last_monitor_value.assign(metric_train_loss.result())
             checkpoint.step.assign_add(1)
 
             # Update the progress bar.
@@ -245,10 +247,17 @@ if __name__ == "__main__":
 
             # Log and checkpoint the model.
             if int(checkpoint.step) % frequency == 0:
-                # Log the training progress.
+                # Log the training progress to TensorBoard..
+                with summary_writer_train.as_default():
+                    tf.summary.scalar("loss", metric_train_loss.result(),
+                                      step=int(checkpoint.step))
+                    tf.summary.scalar("accuracy", metric_train_acc.result(),
+                                      step=int(checkpoint.step))
+
+                # ..and STDOUT.
                 print("Training accuracy: {:.4f}, mean loss: {:.2f}".format(
-                    float(metric_acc_train.result()),
-                    float(metric_loss_train.result())))
+                    float(metric_train_acc.result()),
+                    float(metric_train_loss.result())))
 
                 # Save the checkpoint.
                 ckpt_manager.save()
@@ -258,8 +267,8 @@ if __name__ == "__main__":
         checkpoint.last_epoch.assign_add(1)
 
         # Reset training metrics at the end of each epoch
-        metric_acc_train.reset_states()
-        metric_loss_train.reset_states()
+        metric_train_acc.reset_states()
+        metric_train_loss.reset_states()
 
         # Clean up the progress bar.
         progress_bar.close()
