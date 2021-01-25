@@ -219,7 +219,7 @@ if __name__ == "__main__":
         global_step, initial_epoch))
 
     # Start training loop.
-    epochs = args.epochs - initial_epoch
+    epochs = args.epochs + 1 - initial_epoch
 
     for epoch in range(epochs):
         # Make the epoch number human friendly.
