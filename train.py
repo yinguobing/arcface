@@ -126,7 +126,7 @@ if __name__ == "__main__":
     regularizer = keras.regularizers.L2(5e-4)
 
     # How often do you want to log and save the model, in steps?
-    frequency = 100
+    frequency = 1000
 
     # All sets. Now it's time to build the model. There are two steps in ArcFace
     # training: 1, training with softmax loss; 2, training with arcloss. This
