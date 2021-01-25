@@ -1,6 +1,7 @@
 """The training module for ArcFace face recognition."""
 
 import os
+from tensorflow.keras import metrics
 from tqdm import tqdm
 from argparse import ArgumentParser
 
@@ -73,8 +74,9 @@ def train_step(x_batch, y_batch):
     # Back propagation.
     optimizer.apply_gradients(zip(grads, model.trainable_weights))
 
-    # Calculate the accuracies.
+    # Update the metrics.
     metric_acc_train.update_state(y_batch, logits)
+    metric_loss_train.update_state(loss_value)
 
     return loss_value
 
@@ -163,7 +165,9 @@ if __name__ == "__main__":
     optimizer = keras.optimizers.SGD(schedule, 0.9)
 
     # Construct the metrics for the model.
-    metric_acc_train = keras.metrics.CategoricalAccuracy()
+    metric_acc_train = keras.metrics.CategoricalAccuracy(name="train_accuracy")
+    metric_loss_train = keras.metrics.Mean(name="train_loss_mean",
+                                           dtype=tf.float32)
 
     # Construct training datasets.
     dataset_train = build_dataset(train_files,
@@ -230,7 +234,7 @@ if __name__ == "__main__":
             loss = train_step(x_batch, y_batch)
 
             # Update the monitor value.
-            checkpoint.last_monitor_value.assign(loss)
+            checkpoint.last_monitor_value.assign(metric_loss_train.result())
 
             # Update the checkpoint step counter.
             checkpoint.step.assign_add(1)
@@ -242,8 +246,9 @@ if __name__ == "__main__":
             # Log and checkpoint the model.
             if int(checkpoint.step) % frequency == 0:
                 # Log the training progress.
-                train_acc = metric_acc_train.result()
-                print("CTraining accuracy: {:.4f}".format(float(train_acc)))
+                print("Training accuracy: {:.4f}, mean loss: {:.2f}".format(
+                    float(metric_acc_train.result()),
+                    float(metric_loss_train.result())))
 
                 # Save the checkpoint.
                 ckpt_manager.save()
@@ -254,6 +259,7 @@ if __name__ == "__main__":
 
         # Reset training metrics at the end of each epoch
         metric_acc_train.reset_states()
+        metric_loss_train.reset_states()
 
         # Clean up the progress bar.
         progress_bar.close()
