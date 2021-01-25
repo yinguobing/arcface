@@ -47,7 +47,7 @@ def build_dataset(tfrecord_file,
         return image, label
 
     # Now construct the dataset from tfrecord file and make it indefinite.
-    dataset = tf.data.TFRecordDataset(tfrecord_file).repeat()
+    dataset = tf.data.TFRecordDataset(tfrecord_file)
 
     # Shuffle the data if training.
     if training:
