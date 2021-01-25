@@ -229,7 +229,7 @@ if __name__ == "__main__":
 
             # Update the progress bar.
             progress_bar.update(1)
-            progress_bar.set_postfix({"loss": loss})
+            progress_bar.set_postfix({"loss": loss.numpy()})
 
             # Log and checkpoint the model.
             if int(checkpoint.step) % frequency == 0:
