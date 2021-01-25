@@ -236,3 +236,6 @@ if __name__ == "__main__":
 
         # Update the checkpoint epoch counter.
         checkpoint.last_epoch.assign_add(1)
+
+        # Clean up the progress bar.
+        progress_bar.close()
