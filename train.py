@@ -197,7 +197,9 @@ if __name__ == "__main__":
                                      last_monitor_value=tf.Variable(0.0),
                                      optimizer=optimizer,
                                      model=model,
-                                     dataset=iter(dataset_train))
+                                     dataset=iter(dataset_train),
+                                     metric_train_acc=metric_train_acc,
+                                     metric_train_loss=metric_train_loss)
     ckpt_manager = tf.train.CheckpointManager(checkpoint, checkpoint_dir, 2)
 
     # Restore the latest model if checkpoints are available.
@@ -215,9 +217,6 @@ if __name__ == "__main__":
     initial_epoch = checkpoint.last_epoch.numpy()
     print("Resume training from global step: {}, epoch: {}".format(
         global_step, initial_epoch))
-
-    # Restore the previous training status.
-    optimizer = checkpoint.optimizer
 
     # Start training loop.
     epochs = args.epochs - initial_epoch
@@ -238,7 +237,6 @@ if __name__ == "__main__":
             loss = train_step(x_batch, y_batch)
 
             # Update the checkpoint.
-            checkpoint.last_monitor_value.assign(metric_train_loss.result())
             checkpoint.step.assign_add(1)
 
             # Update the progress bar.
@@ -247,6 +245,10 @@ if __name__ == "__main__":
 
             # Log and checkpoint the model.
             if int(checkpoint.step) % frequency == 0:
+                # Update the checkpoint before saving.
+                checkpoint.last_monitor_value.assign(
+                    metric_train_loss.result())
+
                 # Log the training progress to TensorBoard..
                 with summary_writer_train.as_default():
                     tf.summary.scalar("loss", metric_train_loss.result(),
