@@ -238,11 +238,19 @@ if __name__ == "__main__":
 
             # Log and checkpoint the model.
             if int(checkpoint.step) % frequency == 0:
+                # Log the training progress.
+                train_acc = metric_acc_train.result()
+                print("CTraining accuracy: {:.4f}".format(float(train_acc)))
+
+                # Save the checkpoint.
                 ckpt_manager.save()
                 print("Checkpoint saved for step {}".format(int(checkpoint.step)))
 
         # Update the checkpoint epoch counter.
         checkpoint.last_epoch.assign_add(1)
+
+        # Reset training metrics at the end of each epoch
+        metric_acc_train.reset_states()
 
         # Clean up the progress bar.
         progress_bar.close()
