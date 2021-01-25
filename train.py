@@ -244,7 +244,8 @@ if __name__ == "__main__":
             progress_bar.set_postfix({"loss": loss.numpy()})
 
             # Log and checkpoint the model.
-            if int(checkpoint.step) % frequency == 0:
+            current_step = int(checkpoint.step)
+            if current_step % frequency == 0:
                 # Update the checkpoint before saving.
                 checkpoint.last_monitor_value.assign(
                     metric_train_loss.result())
@@ -252,9 +253,12 @@ if __name__ == "__main__":
                 # Log the training progress to TensorBoard..
                 with summary_writer_train.as_default():
                     tf.summary.scalar("loss", metric_train_loss.result(),
-                                      step=int(checkpoint.step))
+                                      step=current_step)
                     tf.summary.scalar("accuracy", metric_train_acc.result(),
-                                      step=int(checkpoint.step))
+                                      step=current_step)
+                    tf.summary.scalar("learning rate",
+                                      optimizer._decayed_lr('float32'),
+                                      step=current_step)
 
                 # ..and STDOUT.
                 print("Training accuracy: {:.4f}, mean loss: {:.2f}".format(
@@ -263,7 +267,7 @@ if __name__ == "__main__":
 
                 # Save the checkpoint.
                 ckpt_manager.save()
-                print("Checkpoint saved for step {}".format(int(checkpoint.step)))
+                print("Checkpoint saved for step {}".format(current_step))
 
         # Update the checkpoint epoch counter.
         checkpoint.last_epoch.assign_add(1)
