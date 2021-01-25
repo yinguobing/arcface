@@ -212,7 +212,8 @@ if __name__ == "__main__":
         print("\nEpoch {}/{}".format(epoch, args.epochs))
 
         # Visualize the training progress.
-        progress_bar = tqdm(total=steps_per_epoch, initial=initial_step)
+        progress_bar = tqdm(total=steps_per_epoch, initial=initial_step,
+                            ascii="->", colour='#1cd41c')
 
         # Iterate over the batches of the dataset
         for x_batch, y_batch in checkpoint.dataset:
@@ -228,6 +229,7 @@ if __name__ == "__main__":
 
             # Update the progress bar.
             progress_bar.update(1)
+            progress_bar.set_postfix({"loss": loss})
 
             # Log and checkpoint the model.
             if int(checkpoint.step) % frequency == 0:
