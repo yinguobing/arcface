@@ -208,6 +208,9 @@ if __name__ == "__main__":
     print("Resume training from global step: {}, epoch: {}".format(
         global_step, initial_epoch))
 
+    # Restore the previous training status.
+    optimizer = checkpoint.optimizer
+
     # Start training loop.
     epochs = args.epochs - initial_epoch
 
