@@ -223,12 +223,47 @@ if __name__ == "__main__":
     print("Resume training from global step: {}, epoch: {}".format(
         global_step, initial_epoch))
 
-    # Start training loop.
-    epochs = args.epochs + 1 - initial_epoch
+    # Since checkpint and logging occupy lines of code and run frequently,
+    # define a function to make the code concise.
+    def _log_n_checkpoint():
+        """Log and checkpoint the model."""
+        current_step = int(checkpoint.step)
 
-    for epoch in range(epochs):
+        # Is current model the best one we had ever seen?
+        best_model_found = True if (
+            metric_train_loss.result() < checkpoint.last_monitor_value) else False
+
+        # Update the checkpoint before saving.
+        checkpoint.last_monitor_value.assign(
+            metric_train_loss.result())
+
+        # Log the training progress to TensorBoard..
+        with summary_writer_train.as_default():
+            tf.summary.scalar("loss", metric_train_loss.result(),
+                              step=current_step)
+            tf.summary.scalar("accuracy", metric_train_acc.result(),
+                              step=current_step)
+            tf.summary.scalar("learning rate",
+                              optimizer._decayed_lr('float32'),
+                              step=current_step)
+
+        # ..and STDOUT.
+        print("Training accuracy: {:.4f}, mean loss: {:.2f}".format(
+            float(metric_train_acc.result()),
+            float(metric_train_loss.result())))
+
+        # Save a regular checkpoint.
+        ckpt_manager.save()
+        print("Checkpoint saved for step {}".format(current_step))
+
+        # If the best model found, save it.
+        if best_model_found:
+            model_scout.save()
+            print("Best model found and saved.")
+
+    # Start training loop.
+    for epoch in range(initial_epoch, args.epochs + 1):
         # Make the epoch number human friendly.
-        epoch += initial_epoch
         print("\nEpoch {}/{}".format(epoch, args.epochs))
 
         # Visualize the training progress.
@@ -249,39 +284,8 @@ if __name__ == "__main__":
             progress_bar.set_postfix({"loss": loss.numpy()})
 
             # Log and checkpoint the model.
-            current_step = int(checkpoint.step)
-            if current_step % frequency == 0 or current_step == steps_per_epoch:
-                # Is current model the best one we had ever seen?
-                best_model_found = True if (
-                    metric_train_loss.result() < checkpoint.last_monitor_value) else False
-
-                # Update the checkpoint before saving.
-                checkpoint.last_monitor_value.assign(
-                    metric_train_loss.result())
-
-                # Log the training progress to TensorBoard..
-                with summary_writer_train.as_default():
-                    tf.summary.scalar("loss", metric_train_loss.result(),
-                                      step=current_step)
-                    tf.summary.scalar("accuracy", metric_train_acc.result(),
-                                      step=current_step)
-                    tf.summary.scalar("learning rate",
-                                      optimizer._decayed_lr('float32'),
-                                      step=current_step)
-
-                # ..and STDOUT.
-                print("Training accuracy: {:.4f}, mean loss: {:.2f}".format(
-                    float(metric_train_acc.result()),
-                    float(metric_train_loss.result())))
-
-                # Save a regular checkpoint.
-                ckpt_manager.save()
-                print("Checkpoint saved for step {}".format(current_step))
-
-                # If the best model found, save it.
-                if best_model_found:
-                    model_scout.save()
-                    print("Best model found and saved.")
+            if int(checkpoint.step) % frequency == 0:
+                _log_n_checkpoint()
 
         # Update the checkpoint epoch counter.
         checkpoint.last_epoch.assign_add(1)
@@ -289,6 +293,9 @@ if __name__ == "__main__":
         # Reset training metrics at the end of each epoch
         metric_train_acc.reset_states()
         metric_train_loss.reset_states()
+
+        # Save the last checkpoint.
+        _log_n_checkpoint()
 
         # Clean up the progress bar.
         progress_bar.close()
