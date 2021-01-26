@@ -23,6 +23,8 @@ parser.add_argument("--skip_data_steps", default=0, type=int,
                     help="The number of steps to skip for dataset.")
 parser.add_argument("--export_only", default=False, type=bool,
                     help="Save the model without training.")
+parser.add_argument("--restore_weights_only", default=False, type=bool,
+                    help="Only restore the model weights from checkpoint.")
 args = parser.parse_args()
 
 
@@ -214,7 +216,8 @@ if __name__ == "__main__":
         checkpoint, os.path.join(checkpoint_dir, "model_scout"), 1)
 
     # Restore the latest model if checkpoints are available.
-    restore_checkpoint(checkpoint, ckpt_manager, model, False)
+    restore_checkpoint(checkpoint, ckpt_manager, model,
+                       args.restore_weights_only)
 
     # If training accomplished, save the base model for inference.
     if args.export_only:
