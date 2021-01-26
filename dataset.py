@@ -57,7 +57,7 @@ def build_dataset(tfrecord_file,
     dataset = dataset.map(_parse_function, num_parallel_calls=autotune)
 
     # Batch the data.
-    dataset = dataset.batch(batch_size)
+    dataset = dataset.batch(batch_size, drop_remainder=True)
 
     # Prefetch the data to accelerate the pipeline.
     dataset = dataset.prefetch(autotune)
