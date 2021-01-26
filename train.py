@@ -245,7 +245,7 @@ if __name__ == "__main__":
 
             # Log and checkpoint the model.
             current_step = int(checkpoint.step)
-            if current_step % frequency == 0:
+            if current_step % frequency == 0 or current_step == steps_per_epoch:
                 # Update the checkpoint before saving.
                 checkpoint.last_monitor_value.assign(
                     metric_train_loss.result())
