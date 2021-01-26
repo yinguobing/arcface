@@ -26,7 +26,7 @@ parser.add_argument("--export_only", default=False, type=bool,
 args = parser.parse_args()
 
 
-def restore_checkpoint(checkpoint, manager):
+def restore_checkpoint(checkpoint, manager, model, weights_only=False):
     """Restore the model from checkpoint files if available.
 
     Args:
@@ -38,11 +38,17 @@ def restore_checkpoint(checkpoint, manager):
     """
     latest_checkpoint = manager.latest_checkpoint
     if latest_checkpoint:
-        print("Checkpoint found: {}, restoring...".format(latest_checkpoint))
-        checkpoint.restore(manager.latest_checkpoint)
-        print("Checkpoint restored: {}".format(latest_checkpoint))
+        print("Checkpoint found: {}".format(latest_checkpoint))
     else:
         print("WARNING: Checkpoint not found. Model will be initialized from scratch.")
+
+    if weights_only:
+        checkpoint = tf.train.Checkpoint(model)
+        print("Only the model weights will be restored.")
+
+    print("Restoring..")
+    checkpoint.restore(manager.latest_checkpoint)
+    print("Checkpoint restored: {}".format(latest_checkpoint))
 
 
 def export(model, export_dir):
@@ -208,7 +214,7 @@ if __name__ == "__main__":
         checkpoint, os.path.join(checkpoint_dir, "model_scout"), 1)
 
     # Restore the latest model if checkpoints are available.
-    restore_checkpoint(checkpoint, ckpt_manager)
+    restore_checkpoint(checkpoint, ckpt_manager, model, False)
 
     # If training accomplished, save the base model for inference.
     if args.export_only:
@@ -270,6 +276,9 @@ if __name__ == "__main__":
         progress_bar = tqdm(total=steps_per_epoch, initial=initial_step,
                             ascii="->", colour='#1cd41c')
 
+        # Reset the training dataset.
+        checkpoint.dataset = iter(dataset_train)
+
         # Iterate over the batches of the dataset
         for x_batch, y_batch in checkpoint.dataset:
 
@@ -299,3 +308,5 @@ if __name__ == "__main__":
 
         # Clean up the progress bar.
         progress_bar.close()
+
+    print("Training accomplished at epoch {}".format(args.epochs))
