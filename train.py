@@ -202,6 +202,11 @@ if __name__ == "__main__":
                                      metric_train_loss=metric_train_loss)
     ckpt_manager = tf.train.CheckpointManager(checkpoint, checkpoint_dir, 2)
 
+    # The best model may not always manifest at the last training step. It is
+    # better if we can track one besides regular checkpoints,
+    model_scout = tf.train.CheckpointManager(
+        checkpoint, os.path.join(checkpoint_dir, "model_scout"), 1)
+
     # Restore the latest model if checkpoints are available.
     restore_checkpoint(checkpoint, ckpt_manager)
 
@@ -246,6 +251,10 @@ if __name__ == "__main__":
             # Log and checkpoint the model.
             current_step = int(checkpoint.step)
             if current_step % frequency == 0 or current_step == steps_per_epoch:
+                # Is current model the best one we had ever seen?
+                best_model_found = True if (
+                    metric_train_loss.result() < checkpoint.last_monitor_value) else False
+
                 # Update the checkpoint before saving.
                 checkpoint.last_monitor_value.assign(
                     metric_train_loss.result())
@@ -265,9 +274,14 @@ if __name__ == "__main__":
                     float(metric_train_acc.result()),
                     float(metric_train_loss.result())))
 
-                # Save the checkpoint.
+                # Save a regular checkpoint.
                 ckpt_manager.save()
                 print("Checkpoint saved for step {}".format(current_step))
+
+                # If the best model found, save it.
+                if best_model_found:
+                    model_scout.save()
+                    print("Best model found and saved.")
 
         # Update the checkpoint epoch counter.
         checkpoint.last_epoch.assign_add(1)
