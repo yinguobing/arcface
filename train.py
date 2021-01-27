@@ -88,6 +88,47 @@ def train_step(x_batch, y_batch):
     return loss_value
 
 
+def _log_n_checkpoint():
+    """Log and checkpoint the model.
+
+    Since checkpint and logging occupy lines of code and run frequently,
+     define a function to make the code concise.
+     """
+    current_step = int(checkpoint.step)
+
+    # Is current model the best one we had ever seen?
+    best_model_found = True if (
+        metric_train_loss.result() < checkpoint.last_monitor_value) else False
+
+    # Update the checkpoint before saving.
+    checkpoint.last_monitor_value.assign(
+        metric_train_loss.result())
+
+    # Log the training progress to TensorBoard..
+    with summary_writer_train.as_default():
+        tf.summary.scalar("loss", metric_train_loss.result(),
+                          step=current_step)
+        tf.summary.scalar("accuracy", metric_train_acc.result(),
+                          step=current_step)
+        tf.summary.scalar("learning rate",
+                          optimizer._decayed_lr('float32'),
+                          step=current_step)
+
+    # ..and STDOUT.
+    print("Training accuracy: {:.4f}, mean loss: {:.2f}".format(
+        float(metric_train_acc.result()),
+        float(metric_train_loss.result())))
+
+    # Save a regular checkpoint.
+    ckpt_manager.save()
+    print("Checkpoint saved for step {}".format(current_step))
+
+    # If the best model found, save it.
+    if best_model_found:
+        model_scout.save()
+        print("Best model found and saved.")
+
+
 if __name__ == "__main__":
     # Deep neural network training is complicated. The first thing is making
     # sure you have everything ready for training, like datasets, checkpoints,
@@ -231,44 +272,6 @@ if __name__ == "__main__":
     print("Resume training from global step: {}, epoch: {}".format(
         global_step, initial_epoch))
 
-    # Since checkpint and logging occupy lines of code and run frequently,
-    # define a function to make the code concise.
-    def _log_n_checkpoint():
-        """Log and checkpoint the model."""
-        current_step = int(checkpoint.step)
-
-        # Is current model the best one we had ever seen?
-        best_model_found = True if (
-            metric_train_loss.result() < checkpoint.last_monitor_value) else False
-
-        # Update the checkpoint before saving.
-        checkpoint.last_monitor_value.assign(
-            metric_train_loss.result())
-
-        # Log the training progress to TensorBoard..
-        with summary_writer_train.as_default():
-            tf.summary.scalar("loss", metric_train_loss.result(),
-                              step=current_step)
-            tf.summary.scalar("accuracy", metric_train_acc.result(),
-                              step=current_step)
-            tf.summary.scalar("learning rate",
-                              optimizer._decayed_lr('float32'),
-                              step=current_step)
-
-        # ..and STDOUT.
-        print("Training accuracy: {:.4f}, mean loss: {:.2f}".format(
-            float(metric_train_acc.result()),
-            float(metric_train_loss.result())))
-
-        # Save a regular checkpoint.
-        ckpt_manager.save()
-        print("Checkpoint saved for step {}".format(current_step))
-
-        # If the best model found, save it.
-        if best_model_found:
-            model_scout.save()
-            print("Best model found and saved.")
-
     # Start training loop.
     for epoch in range(initial_epoch, args.epochs + 1):
         # Make the epoch number human friendly.
@@ -277,9 +280,6 @@ if __name__ == "__main__":
         # Visualize the training progress.
         progress_bar = tqdm(total=steps_per_epoch, initial=initial_step,
                             ascii="->", colour='#1cd41c')
-
-        # Reset the training dataset.
-        checkpoint.dataset = iter(dataset_train)
 
         # Iterate over the batches of the dataset
         for x_batch, y_batch in checkpoint.dataset:
@@ -304,6 +304,9 @@ if __name__ == "__main__":
         # Reset training metrics at the end of each epoch
         metric_train_acc.reset_states()
         metric_train_loss.reset_states()
+
+        # Reset the training dataset.
+        checkpoint.dataset = iter(dataset_train)
 
         # Save the last checkpoint.
         _log_n_checkpoint()
