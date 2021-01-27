@@ -88,6 +88,12 @@ def train_step(x_batch, y_batch):
     return loss_value
 
 
+def reset_metrics():
+    """Reset training metrics."""
+    metric_train_acc.reset_states()
+    metric_train_loss.reset_states()
+
+
 def _log_n_checkpoint():
     """Log and checkpoint the model.
 
@@ -119,14 +125,15 @@ def _log_n_checkpoint():
         float(metric_train_acc.result()),
         float(metric_train_loss.result())))
 
-    # Save a regular checkpoint.
-    ckpt_manager.save()
-    print("Checkpoint saved for step {}".format(current_step))
-
     # If the best model found, save it.
     if best_model_found:
         model_scout.save()
         print("Best model found and saved.")
+
+    # Save a regular checkpoint.
+    reset_metrics()
+    ckpt_manager.save()
+    print("Checkpoint saved for step {}".format(current_step))
 
 
 if __name__ == "__main__":
@@ -242,9 +249,7 @@ if __name__ == "__main__":
                                      last_monitor_value=tf.Variable(0.0),
                                      optimizer=optimizer,
                                      model=model,
-                                     dataset=iter(dataset_train),
-                                     metric_train_acc=metric_train_acc,
-                                     metric_train_loss=metric_train_loss)
+                                     dataset=iter(dataset_train))
     ckpt_manager = tf.train.CheckpointManager(checkpoint, checkpoint_dir, 2)
 
     # The best model may not always manifest at the last training step. It is
