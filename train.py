@@ -32,11 +32,10 @@ def restore_checkpoint(checkpoint, manager, model, weights_only=False):
     """Restore the model from checkpoint files if available.
 
     Args:
-        checkpoint: the checkpoint.
+        checkpoint: the checkpoint defining the objects saved.
         manager: the checkpoint manager.
-
-    Returns:
-        a boolean indicating whether the model was restored successfully.
+        model: the model to be restored.
+        weights_only: only restore the model weights if set to True.
     """
     latest_checkpoint = manager.latest_checkpoint
     if latest_checkpoint:
