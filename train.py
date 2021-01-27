@@ -205,12 +205,9 @@ if __name__ == "__main__":
                                  name="training_model")
         loss_fun = ArcLoss()
 
-    # Construct an optimizer with learning rate schedule. We will follow the
-    # official instructions.
-    schedule = keras.optimizers.schedules.PiecewiseConstantDecay(
-        boundaries=[2e5, 3.2e5, 3.6e5],
-        values=[0.1, 0.01, 0.001, 0.0001])
-    optimizer = keras.optimizers.SGD(schedule, 0.9)
+    # Construct an optimizer. This optimizer is different from the official
+    # implementation which use SGD with momentum.
+    optimizer = keras.optimizers.Adam()
 
     # Construct the metrics for the model.
     metric_train_acc = keras.metrics.CategoricalAccuracy(name="train_accuracy")
