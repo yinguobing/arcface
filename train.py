@@ -100,17 +100,20 @@ def _log_n_checkpoint():
     Since checkpint and logging occupy lines of code and run frequently,
      define a function to make the code concise.
      """
-    current_step = int(checkpoint.step)
-
     # Is current model the best one we had ever seen?
-    best_model_found = True if (
-        metric_train_loss.result() < checkpoint.last_monitor_value) else False
+    if metric_train_loss.result() < checkpoint.last_monitor_value:
+        print("Monitor value changed from {} to {}."
+              .format(checkpoint.last_monitor_value, metric_train_loss.result()),
+              end=" ")
+        best_model_found = True
+    else:
+        best_model_found = False
 
     # Update the checkpoint before saving.
-    checkpoint.last_monitor_value.assign(
-        metric_train_loss.result())
+    checkpoint.last_monitor_value.assign(metric_train_loss.result())
 
     # Log the training progress to TensorBoard..
+    current_step = int(checkpoint.step)
     with summary_writer_train.as_default():
         tf.summary.scalar("loss", metric_train_loss.result(),
                           step=current_step)
@@ -125,7 +128,7 @@ def _log_n_checkpoint():
         float(metric_train_acc.result()),
         float(metric_train_loss.result())))
 
-    # If the best model found, save it.
+    # Save the best model if one is found.
     if best_model_found:
         model_scout.save()
         print("Best model found and saved.")
