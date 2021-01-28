@@ -303,10 +303,6 @@ if __name__ == "__main__":
         # Update the checkpoint epoch counter.
         checkpoint.last_epoch.assign_add(1)
 
-        # Reset training metrics at the end of each epoch
-        metric_train_acc.reset_states()
-        metric_train_loss.reset_states()
-
         # Reset the training dataset.
         checkpoint.dataset = iter(dataset_train)
 
