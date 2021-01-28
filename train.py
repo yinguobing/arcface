@@ -294,7 +294,9 @@ if __name__ == "__main__":
 
             # Update the progress bar.
             progress_bar.update(1)
-            progress_bar.set_postfix({"loss": loss.numpy()})
+            progress_bar.set_postfix({
+                "loss": loss.numpy(),
+                "accuracy": metric_train_acc.result().numpy()})
 
             # Log and checkpoint the model.
             if int(checkpoint.step) % frequency == 0:
