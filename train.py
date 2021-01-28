@@ -274,6 +274,10 @@ if __name__ == "__main__":
     print("Resume training from global step: {}, epoch: {}".format(
         global_step, initial_epoch))
 
+    # Safety check. Make sure the epochs is larger than that of the checkpoint.
+    assert initial_epoch <= args.epochs, "Total epoch number {} should be \
+        larger than {} of the checkpoint.".format(args.epochs, initial_epoch)
+
     # Start training loop.
     for epoch in range(initial_epoch, args.epochs + 1):
         # Make the epoch number human friendly.
