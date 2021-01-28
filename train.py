@@ -97,20 +97,19 @@ def reset_metrics():
 def _log_n_checkpoint():
     """Log and checkpoint the model.
 
-    Since checkpint and logging occupy lines of code and run frequently,
-     define a function to make the code concise.
-     """
+    Since checkpint and logging occupy lines of code and run frequently, define 
+    a function to make the code concise.
+    """
     # Is current model the best one we had ever seen?
     if metric_train_loss.result() < checkpoint.last_monitor_value:
-        print("Monitor value changed from {} to {}."
-              .format(checkpoint.last_monitor_value, metric_train_loss.result()),
-              end=" ")
+        print("Monitor value changed from {:.4f} to {:.4f}."
+              .format(checkpoint.last_monitor_value.numpy(), metric_train_loss.result()))
+
+        # Update the checkpoint.
+        checkpoint.last_monitor_value.assign(metric_train_loss.result())
         best_model_found = True
     else:
         best_model_found = False
-
-    # Update the checkpoint before saving.
-    checkpoint.last_monitor_value.assign(metric_train_loss.result())
 
     # Log the training progress to TensorBoard..
     current_step = int(checkpoint.step)
