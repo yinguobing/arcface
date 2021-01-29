@@ -96,21 +96,40 @@ def reset_metrics():
     metric_train_loss.reset_states()
 
 
-def _log_n_checkpoint():
+def _log_n_checkpoint(monitor, mode):
     """Log and checkpoint the model.
+
+    Args:
+        monitor: the metric value to monitor.
+        mode: one of {'min', 'max'}
 
     Since checkpint and logging occupy lines of code and run frequently, define 
     a function to make the code concise.
     """
+    # Initialize the monitor value to make subsequent comparisons valid.
+    if checkpoint.last_monitor_value.numpy() == 0.0:
+        checkpoint.last_monitor_value.assign(monitor)
+
+    # A helper function to check values by mode.
+    def _check_value(v1, v2, mode):
+        if (v1 < v2) & (mode == 'min'):
+            return True
+        elif (v1 > v2) & (mode == 'max'):
+            return True
+        else:
+            return False
+
     # Is current model the best one we had ever seen?
-    if metric_train_loss.result() < checkpoint.last_monitor_value:
-        print("Monitor value changed from {:.4f} to {:.4f}."
-              .format(checkpoint.last_monitor_value.numpy(), metric_train_loss.result()))
+    if _check_value(monitor, checkpoint.last_monitor_value, mode):
+        print("Monitor value improved from {:.4f} to {:.4f}."
+              .format(checkpoint.last_monitor_value.numpy(), monitor))
 
         # Update the checkpoint.
-        checkpoint.last_monitor_value.assign(metric_train_loss.result())
+        checkpoint.last_monitor_value.assign(monitor)
         best_model_found = True
     else:
+        print("Monitor value not improved from {:.4f} to {:.4f}."
+              .format(checkpoint.last_monitor_value.numpy(), monitor))
         best_model_found = False
 
     # Log the training progress to TensorBoard..
@@ -317,7 +336,7 @@ if __name__ == "__main__":
 
             # Log and checkpoint the model.
             if int(checkpoint.step) % frequency == 0:
-                _log_n_checkpoint()
+                _log_n_checkpoint(metric_train_acc.result(), 'min')
 
         # Update the checkpoint epoch counter.
         checkpoint.last_epoch.assign_add(1)
@@ -326,7 +345,7 @@ if __name__ == "__main__":
         checkpoint.dataset = iter(dataset_train)
 
         # Save the last checkpoint.
-        _log_n_checkpoint()
+        _log_n_checkpoint(metric_train_acc.result(), 'min')
 
         # Clean up the progress bar.
         progress_bar.close()
