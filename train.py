@@ -25,6 +25,8 @@ parser.add_argument("--export_only", default=False, type=bool,
                     help="Save the model without training.")
 parser.add_argument("--restore_weights_only", default=False, type=bool,
                     help="Only restore the model weights from checkpoint.")
+parser.add_argument("--override", default=False, type=bool,
+                    help="Manually override the training objects.")
 args = parser.parse_args()
 
 
@@ -219,7 +221,7 @@ if __name__ == "__main__":
 
     # Construct an optimizer. This optimizer is different from the official
     # implementation which use SGD with momentum.
-    optimizer = keras.optimizers.Adam(amsgrad=True, epsilon=0.001)
+    optimizer = keras.optimizers.Adam(0.001, amsgrad=True, epsilon=0.001)
 
     # Construct the metrics for the model.
     metric_train_acc = keras.metrics.CategoricalAccuracy(name="train_accuracy")
@@ -270,6 +272,12 @@ if __name__ == "__main__":
     if args.export_only:
         export(base_model, export_dir)
         quit()
+
+    # Sometimes the training process might go wrong and we would like to resume
+    # training from manually selected checkpoint. In this case some training
+    # objects should be overridden before training started.
+    if args.override:
+        pass
 
     # If training shall be resumed, where are we now?
     global_step = checkpoint.step.numpy()
