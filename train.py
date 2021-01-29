@@ -277,7 +277,7 @@ if __name__ == "__main__":
     # training from manually selected checkpoint. In this case some training
     # objects should be overridden before training started.
     if args.override:
-        pass
+        print("Training process overridden by user.")
 
     # If training shall be resumed, where are we now?
     global_step = checkpoint.step.numpy()
