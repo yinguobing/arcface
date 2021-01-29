@@ -96,43 +96,8 @@ def reset_metrics():
     metric_train_loss.reset_states()
 
 
-def _log_n_checkpoint(monitor, mode):
-    """Log and checkpoint the model.
-
-    Args:
-        monitor: the metric value to monitor.
-        mode: one of {'min', 'max'}
-
-    Since checkpint and logging occupy lines of code and run frequently, define 
-    a function to make the code concise.
-    """
-    # Initialize the monitor value to make subsequent comparisons valid.
-    if checkpoint.last_monitor_value.numpy() == 0.0:
-        checkpoint.last_monitor_value.assign(monitor)
-
-    # A helper function to check values by mode.
-    def _check_value(v1, v2, mode):
-        if (v1 < v2) & (mode == 'min'):
-            return True
-        elif (v1 > v2) & (mode == 'max'):
-            return True
-        else:
-            return False
-
-    # Is current model the best one we had ever seen?
-    if _check_value(monitor, checkpoint.last_monitor_value, mode):
-        print("Monitor value improved from {:.4f} to {:.4f}."
-              .format(checkpoint.last_monitor_value.numpy(), monitor))
-
-        # Update the checkpoint.
-        checkpoint.last_monitor_value.assign(monitor)
-        best_model_found = True
-    else:
-        print("Monitor value not improved from {:.4f} to {:.4f}."
-              .format(checkpoint.last_monitor_value.numpy(), monitor))
-        best_model_found = False
-
-    # Log the training progress to TensorBoard..
+def log_to_tensorboard():
+    """Log the training process to TensorBoard."""
     current_step = int(checkpoint.step)
     with summary_writer_train.as_default():
         tf.summary.scalar("loss", metric_train_loss.result(),
@@ -143,20 +108,51 @@ def _log_n_checkpoint(monitor, mode):
                           optimizer._decayed_lr('float32'),
                           step=current_step)
 
-    # ..and STDOUT.
+    # Log to STDOUT.
     print("Training accuracy: {:.4f}, mean loss: {:.2f}".format(
         float(metric_train_acc.result()),
         float(metric_train_loss.result())))
 
-    # Save the best model if one is found.
-    if best_model_found:
+
+def save_checkpoint(monitor, mode):
+    """Save a checkpoint of the model.
+
+    Args:
+        monitor: the metric value to monitor.
+        mode: one of {'min', 'max'}
+    """
+    # A helper function to check values by mode.
+    def _check_value(v1, v2, mode):
+        if (v1 < v2) & (mode == 'min'):
+            return True
+        elif (v1 > v2) & (mode == 'max'):
+            return True
+        else:
+            return False
+
+    # Initialize the monitor value to make subsequent comparisons valid.
+    if checkpoint.last_monitor_value.numpy() == 0.0:
+        checkpoint.last_monitor_value.assign(monitor)
+
+    # Is current model the best one we had ever seen?
+    if _check_value(monitor, checkpoint.last_monitor_value, mode):
+        print("Monitor value improved from {:.4f} to {:.4f}."
+              .format(checkpoint.last_monitor_value.numpy(), monitor))
+
+        # Update the checkpoint.
+        checkpoint.last_monitor_value.assign(monitor)
+
+        # And save the model.
         model_scout.save()
         print("Best model found and saved.")
+    else:
+        print("Monitor value not improved: {:.4f}, latest: {:.4f}."
+              .format(monitor, checkpoint.last_monitor_value.numpy()))
 
     # Save a regular checkpoint.
     reset_metrics()
     ckpt_manager.save()
-    print("Checkpoint saved for step {}".format(current_step))
+    print("Checkpoint saved for step {}".format(int(checkpoint.step)))
 
 
 if __name__ == "__main__":
@@ -336,7 +332,8 @@ if __name__ == "__main__":
 
             # Log and checkpoint the model.
             if int(checkpoint.step) % frequency == 0:
-                _log_n_checkpoint(metric_train_acc.result(), 'min')
+                log_to_tensorboard()
+                save_checkpoint(metric_train_acc.result(), 'min')
 
         # Update the checkpoint epoch counter.
         checkpoint.last_epoch.assign_add(1)
@@ -345,7 +342,8 @@ if __name__ == "__main__":
         checkpoint.dataset = iter(dataset_train)
 
         # Save the last checkpoint.
-        _log_n_checkpoint(metric_train_acc.result(), 'min')
+        log_to_tensorboard()
+        save_checkpoint(metric_train_acc.result(), 'min')
 
         # Clean up the progress bar.
         progress_bar.close()
