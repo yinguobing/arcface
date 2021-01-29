@@ -214,9 +214,12 @@ if __name__ == "__main__":
                                  name="training_model")
         loss_fun = ArcLoss()
 
+    # Summary the model to find any thing suspicious at early stage.
+    model.summary()
+
     # Construct an optimizer. This optimizer is different from the official
     # implementation which use SGD with momentum.
-    optimizer = keras.optimizers.Adam()
+    optimizer = keras.optimizers.Adam(amsgrad=True, epsilon=0.001)
 
     # Construct the metrics for the model.
     metric_train_acc = keras.metrics.CategoricalAccuracy(name="train_accuracy")
