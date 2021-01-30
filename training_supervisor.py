@@ -283,3 +283,22 @@ class TrainingSupervisor(object):
         print("Saving model to {} ...".format(export_dir))
         model.save(export_dir)
         print("Model saved at: {}".format(export_dir))
+
+    def override(self, step=None, epoch=None, monitor_value=None):
+        """Override the current training schedule with a new one.
+
+        The parameter won't be overridden if new value is None.
+
+        Args:
+            step: new training step to start from.
+            epoch: new epoch to start from.
+            monitor_value: new monitor value to start with.
+        """
+        if step:
+            self.schedule['step'].assign(step)
+
+        if epoch:
+            self.schedule['epoch'].assign(epoch)
+
+        if monitor_value:
+            self.schedule['monitor_value'].assign(monitor_value)
