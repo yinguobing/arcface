@@ -34,7 +34,10 @@ class TrainingSupervisor(object):
         # Both the model and the training status shall be tracked. A TensorFlow
         # checkpoint is the best option to fullfill this job.
         self.checkpoint = tf.train.Checkpoint(
-            model=model,
+            model=self.model,
+            optimizer=self.optimizer,
+            loss_fun=self.loss_fun,
+            metrics=self.metrics,
             schedule=self.schedule)
 
         # A model manager is responsible for saving the current training
@@ -80,3 +83,5 @@ class TrainingSupervisor(object):
             self.checkpoint.restore(latest_checkpoint)
 
         print("Checkpoint restored: {}".format(latest_checkpoint))
+
+    
