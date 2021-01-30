@@ -9,7 +9,7 @@ from tqdm import tqdm
 class TrainingSupervisor(object):
     """A training supervisor will organize and monitor the training process."""
 
-    def __init__(self, model, optimizer, loss, dataset, training_dir, save_freq, monitor, name) -> None:
+    def __init__(self, model, optimizer, loss, dataset, training_dir, save_freq, monitor, mode, name) -> None:
         """Training supervisor organizes and monitors the training process.
 
         Args:
@@ -38,6 +38,7 @@ class TrainingSupervisor(object):
             'loss': tf.keras.metrics.Mean(name="train_loss_mean",
                                           dtype=tf.float32)}
         self.monitor = self.metrics[monitor]
+        self.mode = mode
 
         # Training schedule tracks the training progress. The training
         # supervisor uses this object to make training arrangement. The schedule
