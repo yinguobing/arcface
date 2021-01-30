@@ -333,7 +333,7 @@ if __name__ == "__main__":
             # Log and checkpoint the model.
             if int(checkpoint.step) % frequency == 0:
                 log_to_tensorboard()
-                save_checkpoint(metric_train_acc.result(), 'min')
+                save_checkpoint(metric_train_acc.result(), 'max')
 
         # Update the checkpoint epoch counter.
         checkpoint.last_epoch.assign_add(1)
@@ -343,7 +343,7 @@ if __name__ == "__main__":
 
         # Save the last checkpoint.
         log_to_tensorboard()
-        save_checkpoint(metric_train_acc.result(), 'min')
+        save_checkpoint(metric_train_acc.result(), 'max')
 
         # Clean up the progress bar.
         progress_bar.close()
