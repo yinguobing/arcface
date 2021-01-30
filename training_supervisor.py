@@ -272,3 +272,13 @@ class TrainingSupervisor(object):
             progress_bar.close()
 
         print("Training accomplished at epoch {}".format(epochs))
+
+    def export(self, model, export_dir):
+        """Export the model in saved_model format.
+
+        Args:
+            export_dir: the direcotry where the model will be saved.
+        """
+        print("Saving model to {} ...".format(export_dir))
+        model.save(export_dir)
+        print("Model saved at: {}".format(export_dir))
