@@ -1,5 +1,5 @@
 # arcface
-A TensorFlow implementation of ArcFace for face recognition.
+A TensorFlow implementation of [ArcFace](https://arxiv.org/abs/1801.07698) for face recognition.
 
 ## Features
  - Build with TensorFlow 2.4 Keras API
