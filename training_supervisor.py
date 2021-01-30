@@ -31,7 +31,9 @@ class TrainingSupervisor(object):
         # Training schedule tracks the training progress. The training
         # supervisor uses this object to make training arrangement. The schedule
         # is saved in the checkpoint and maintained by the manager.
-        self.schedule = {}
+        self.schedule = {
+            'step': tf.Variable(0, trainable=False, dtype=tf.int64),
+            'epoch': tf.Variable(1, trainable=False, dtype=tf.int64)}
 
         # Both the model and the training status shall be tracked. A TensorFlow
         # checkpoint is the best option to fullfill this job.
