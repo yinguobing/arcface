@@ -30,15 +30,15 @@ git clone --recursive https://github.com/yinguobing/arcface
 #### Download the training data
 You can use any dataset as long as they can be converted to TensorFlow Record files. If you do not have any dataset, please download one from the ArcFace official [dataset list](https://github.com/deepinsight/insightface/wiki/Dataset-Zoo). 
 
-#### Generate training dataset.
-This project also provides a demo file showing how to convert the downloaded MXNet dataset into TFRecord files. You can run it like this:
+#### Generate training dataset
+This project provides a demo file showing how to convert the downloaded MXNet dataset into TFRecord files. You can run it like this:
 
 ```bash
 # From the project root directory
 python3 -m utils.mx_2_tf
 ```
 
-#### Fully shuffle the dataset.
+#### Fully shuffle the dataset
 Most face recognition datasets contains millions of training samples. It is better to fully shuffle the data in the record file.
 ```bash
 cd utils
@@ -50,7 +50,7 @@ Do not forget setting a correct dataset file path.
 ## Training
 Deep neural network training can be complicated as you have to make sure everything is ready like datasets, checkpoints, logs, etc. But do not worry. Following these steps you should be fine.
 
-### Setup the model.
+### Setup the model
 In the module `train.py`, setup your model's name.
 
 ```python
@@ -93,7 +93,7 @@ python3 train.py --epochs=2 --batch_size=192 --softmax=True
 python3 train.py --epochs=4 --batch_size=192
 ```
 
-Training checkpoints can be found in directory `checkpoints`. There is also another directory `model_scout` containing the `best`(max accuracy) model checkpoint. This happens automatically.
+Training checkpoints can be found in directory `checkpoints`. There is also another directory `model_scout` containing the best(max accuracy) model checkpoint. You get this feature for free.
 
 ### Resume training
 Once the training was interrupted, you can resume it with the exact same command used for staring. The build in `TrainingSupervisor` will handle this situation automatically, and load the previous training status from the latest checkpoint. 
