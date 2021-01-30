@@ -94,7 +94,15 @@ class TrainingSupervisor(object):
 
     @tf.function
     def _train_step(self, x_batch, y_batch):
-        """Define the training step function."""
+        """Define the training step function.
+
+        Args:
+            x_batch: the inputs of the network.
+            y_batch: the labels of the batched inputs.
+
+        Returns:
+            logtis and loss.
+        """
 
         with tf.GradientTape() as tape:
             # Run the forward propagation.
@@ -111,3 +119,20 @@ class TrainingSupervisor(object):
             zip(grads, self.model.trainable_weights))
 
         return logits, loss
+
+    @tf.function
+    def _update_metrics(self, labels, logits, loss):
+        """Update the metrics.
+
+        Args:
+            labels: the labels of the batched inputs.
+            logits: the outputs of the model.
+            loss: the loss value of current training step.
+        """
+        self.metrics['categorical_accuracy'].update_state(labels, logits)
+        self.metrics['loss'].update_state(loss)
+
+    def _reset_metrics(self):
+        """Reset all the metrics."""
+        for _, metric in self.metrics.items():
+            metric.reset()
