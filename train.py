@@ -1,16 +1,14 @@
 """The training module for ArcFace face recognition."""
 
 import os
-from tensorflow.keras import metrics
-from tqdm import tqdm
 from argparse import ArgumentParser
 
-import tensorflow as tf
 from tensorflow import keras
 
 from dataset import build_dataset
 from losses import ArcLoss
-from network import L2Normalization, hrnet_v2, ArcLayer
+from network import ArcLayer, L2Normalization, hrnet_v2
+from training_supervisor import TrainingSupervisor
 
 parser = ArgumentParser()
 parser.add_argument("--softmax", default=False, type=bool,
@@ -19,8 +17,6 @@ parser.add_argument("--epochs", default=60, type=int,
                     help="Number of training epochs.")
 parser.add_argument("--batch_size", default=128, type=int,
                     help="Training batch size.")
-parser.add_argument("--skip_data_steps", default=0, type=int,
-                    help="The number of steps to skip for dataset.")
 parser.add_argument("--export_only", default=False, type=bool,
                     help="Save the model without training.")
 parser.add_argument("--restore_weights_only", default=False, type=bool,
@@ -28,132 +24,6 @@ parser.add_argument("--restore_weights_only", default=False, type=bool,
 parser.add_argument("--override", default=False, type=bool,
                     help="Manually override the training objects.")
 args = parser.parse_args()
-
-
-def restore_checkpoint(checkpoint, manager, model, weights_only=False):
-    """Restore the model from checkpoint files if available.
-
-    Args:
-        checkpoint: the checkpoint defining the objects saved.
-        manager: the checkpoint manager.
-        model: the model to be restored.
-        weights_only: only restore the model weights if set to True.
-    """
-    latest_checkpoint = manager.latest_checkpoint
-    if latest_checkpoint:
-        print("Checkpoint found: {}".format(latest_checkpoint))
-    else:
-        print("WARNING: Checkpoint not found. Model will be initialized from scratch.")
-
-    if weights_only:
-        checkpoint = tf.train.Checkpoint(model)
-        print("Only the model weights will be restored.")
-
-    print("Restoring..")
-    checkpoint.restore(manager.latest_checkpoint)
-    print("Checkpoint restored: {}".format(latest_checkpoint))
-
-
-def export(model, export_dir):
-    """Export the model in saved_model format.
-
-    Args:
-        model: the keras model to be saved.
-        export_dir: the direcotry where the model will be saved.
-    """
-    print("Saving model to {} ...".format(export_dir))
-    model.save(export_dir)
-    print("Model saved at: {}".format(export_dir))
-
-
-@tf.function
-def train_step(x_batch, y_batch):
-    """Define the training step function."""
-
-    with tf.GradientTape() as tape:
-        # Run the forward propagation.
-        logits = model(x_batch, training=True)
-
-        # Calculate the loss value from targets and regularization.
-        loss_value = loss_fun(y_batch, logits) + sum(model.losses)
-
-    # Calculate the gradients.
-    grads = tape.gradient(loss_value, model.trainable_weights)
-
-    # Back propagation.
-    optimizer.apply_gradients(zip(grads, model.trainable_weights))
-
-    # Update the metrics.
-    metric_train_acc.update_state(y_batch, logits)
-    metric_train_loss.update_state(loss_value)
-
-    return loss_value
-
-
-def reset_metrics():
-    """Reset training metrics."""
-    metric_train_acc.reset_states()
-    metric_train_loss.reset_states()
-
-
-def log_to_tensorboard():
-    """Log the training process to TensorBoard."""
-    current_step = int(checkpoint.step)
-    with summary_writer_train.as_default():
-        tf.summary.scalar("loss", metric_train_loss.result(),
-                          step=current_step)
-        tf.summary.scalar("accuracy", metric_train_acc.result(),
-                          step=current_step)
-        tf.summary.scalar("learning rate",
-                          optimizer._decayed_lr('float32'),
-                          step=current_step)
-
-    # Log to STDOUT.
-    print("Training accuracy: {:.4f}, mean loss: {:.2f}".format(
-        float(metric_train_acc.result()),
-        float(metric_train_loss.result())))
-
-
-def save_checkpoint(monitor, mode):
-    """Save a checkpoint of the model.
-
-    Args:
-        monitor: the metric value to monitor.
-        mode: one of {'min', 'max'}
-    """
-    # A helper function to check values by mode.
-    def _check_value(v1, v2, mode):
-        if (v1 < v2) & (mode == 'min'):
-            return True
-        elif (v1 > v2) & (mode == 'max'):
-            return True
-        else:
-            return False
-
-    # Initialize the monitor value to make subsequent comparisons valid.
-    if checkpoint.last_monitor_value.numpy() == 0.0:
-        checkpoint.last_monitor_value.assign(monitor)
-
-    # Is current model the best one we had ever seen?
-    if _check_value(monitor, checkpoint.last_monitor_value, mode):
-        print("Monitor value improved from {:.4f} to {:.4f}."
-              .format(checkpoint.last_monitor_value.numpy(), monitor))
-
-        # Update the checkpoint.
-        checkpoint.last_monitor_value.assign(monitor)
-
-        # And save the model.
-        model_scout.save()
-        print("Best model found and saved.")
-    else:
-        print("Monitor value not improved: {:.4f}, latest: {:.4f}."
-              .format(monitor, checkpoint.last_monitor_value.numpy()))
-
-    # Save a regular checkpoint.
-    reset_metrics()
-    ckpt_manager.save()
-    print("Checkpoint saved for step {}".format(int(checkpoint.step)))
-
 
 if __name__ == "__main__":
     # Deep neural network training is complicated. The first thing is making
@@ -187,14 +57,11 @@ if __name__ == "__main__":
     # That should be sufficient for training. However if you want more
     # customization, please keep going.
 
-    # Checkpoint is used to resume training.
-    checkpoint_dir = os.path.join("checkpoints", name)
+    # Where is the training direcotory for checkpoints and logs?
+    training_dir = os.getcwd()
 
-    # Save the model for inference later.
-    export_dir = os.path.join("exported", name)
-
-    # Log directory will keep training logs like loss/accuracy curves.
-    log_dir = os.path.join("logs", name)
+    # Where is the exported model going to be saved?
+    export_dir = os.path.join(training_dir, 'exported', name)
 
     # Any weight regularization?
     regularizer = keras.regularizers.L2(5e-4)
@@ -238,15 +105,6 @@ if __name__ == "__main__":
     # implementation which use SGD with momentum.
     optimizer = keras.optimizers.Adam(0.001, amsgrad=True, epsilon=0.001)
 
-    # Construct the metrics for the model.
-    metric_train_acc = keras.metrics.CategoricalAccuracy(name="train_accuracy")
-    metric_train_loss = keras.metrics.Mean(name="train_loss_mean",
-                                           dtype=tf.float32)
-
-    # User summary writer to log the training process to TensorBoard.
-    summary_writer_train = tf.summary.create_file_writer(
-        os.path.join(log_dir, "train"))
-
     # Construct training datasets.
     dataset_train = build_dataset(train_files,
                                   batch_size=args.batch_size,
@@ -265,27 +123,24 @@ if __name__ == "__main__":
     else:
         dataset_val = None
 
-    # Save a checkpoint. This could be used to resume training.
-    checkpoint = tf.train.Checkpoint(step=tf.Variable(0),
-                                     last_epoch=tf.Variable(1),
-                                     last_monitor_value=tf.Variable(0.0),
-                                     optimizer=optimizer,
-                                     model=model,
-                                     dataset=iter(dataset_train))
-    ckpt_manager = tf.train.CheckpointManager(checkpoint, checkpoint_dir, 2)
-
-    # The best model may not always manifest at the last training step. It is
-    # better if we can track one besides regular checkpoints,
-    model_scout = tf.train.CheckpointManager(
-        checkpoint, os.path.join(checkpoint_dir, "model_scout"), 1)
+    # The training adventure is long and full of traps. A training supervisor
+    # can help us to ease the pain.
+    supervisor = TrainingSupervisor(model,
+                                    optimizer,
+                                    loss_fun,
+                                    dataset_train,
+                                    training_dir,
+                                    frequency,
+                                    "categorical_accuracy",
+                                    'max',
+                                    name)
 
     # Restore the latest model if checkpoints are available.
-    restore_checkpoint(checkpoint, ckpt_manager, model,
-                       args.restore_weights_only)
+    supervisor.restore(args.restore_weights_only)
 
     # If training accomplished, save the base model for inference.
     if args.export_only:
-        export(base_model, export_dir)
+        supervisor.export(base_model, export_dir)
         quit()
 
     # Sometimes the training process might go wrong and we would like to resume
@@ -294,58 +149,8 @@ if __name__ == "__main__":
     if args.override:
         print("Training process overridden by user.")
 
-    # If training shall be resumed, where are we now?
-    global_step = checkpoint.step.numpy()
-    steps_per_epoch = num_examples // args.batch_size
-    initial_step = global_step % steps_per_epoch
-    initial_epoch = checkpoint.last_epoch.numpy()
-    print("Resume training from global step: {}, epoch: {}".format(
-        global_step, initial_epoch))
+    # Now it is safe to staring training.
+    supervisor.train(args.epochs, num_examples // args.batch_size)
 
-    # Safety check. Make sure the epochs is larger than that of the checkpoint.
-    assert initial_epoch <= args.epochs, "Total epoch number {} should be \
-        larger than {} of the checkpoint.".format(args.epochs, initial_epoch)
-
-    # Start training loop.
-    for epoch in range(initial_epoch, args.epochs + 1):
-        # Make the epoch number human friendly.
-        print("\nEpoch {}/{}".format(epoch, args.epochs))
-
-        # Visualize the training progress.
-        progress_bar = tqdm(total=steps_per_epoch, initial=initial_step,
-                            ascii="->", colour='#1cd41c')
-
-        # Iterate over the batches of the dataset
-        for x_batch, y_batch in checkpoint.dataset:
-
-            # Train for one step.
-            loss = train_step(x_batch, y_batch)
-
-            # Update the checkpoint.
-            checkpoint.step.assign_add(1)
-
-            # Update the progress bar.
-            progress_bar.update(1)
-            progress_bar.set_postfix({
-                "loss": "{:.2f}".format(loss.numpy()),
-                "accuracy": "{:.3f}".format(metric_train_acc.result().numpy())})
-
-            # Log and checkpoint the model.
-            if int(checkpoint.step) % frequency == 0:
-                log_to_tensorboard()
-                save_checkpoint(metric_train_acc.result(), 'max')
-
-        # Update the checkpoint epoch counter.
-        checkpoint.last_epoch.assign_add(1)
-
-        # Reset the training dataset.
-        checkpoint.dataset = iter(dataset_train)
-
-        # Save the last checkpoint.
-        log_to_tensorboard()
-        save_checkpoint(metric_train_acc.result(), 'max')
-
-        # Clean up the progress bar.
-        progress_bar.close()
-
-    print("Training accomplished at epoch {}".format(args.epochs))
+    # Export the model after training.
+    supervisor.export(base_model, export_dir)
