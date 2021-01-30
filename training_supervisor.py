@@ -9,7 +9,7 @@ from tqdm import tqdm
 class TrainingSupervisor(object):
     """A training supervisor will organize and monitor the training process."""
 
-    def __init__(self, model, optimizer, loss, dataset, training_dir, save_freq, monitor) -> None:
+    def __init__(self, model, optimizer, loss, dataset, training_dir, save_freq, monitor, name) -> None:
         """Training supervisor organizes and monitors the training process.
 
         Args:
@@ -21,6 +21,7 @@ class TrainingSupervisor(object):
             save_freq: integer, the supervisor saves the model at end of this many batches.
             monitor: the metric name to monitor.
             mode: one of {'min', 'max'}
+            name: current model or project name.
         """
         super().__init__()
 
@@ -61,19 +62,19 @@ class TrainingSupervisor(object):
         # schedule and the model weights.
         self.manager = tf.train.CheckpointManager(
             self.checkpoint,
-            os.path.join(training_dir, 'checkpoints'),
+            os.path.join(training_dir, 'checkpoints', name),
             max_to_keep=2)
 
         # A model scout watches and saves the best model according to the
         # monitor value.
         self.scout = tf.train.CheckpointManager(
             self.checkpoint,
-            os.path.join(training_dir, 'model_scout'),
+            os.path.join(training_dir, 'model_scout', name),
             max_to_keep=1)
 
         # A clerk writes the training logs to the TensorBoard.
         self.clerk = tf.summary.create_file_writer(
-            os.path.join(training_dir, 'logs'))
+            os.path.join(training_dir, 'logs', name))
 
     def restore(self, weights_only=False):
         """Restore training process from previous training checkpoint.
