@@ -161,3 +161,49 @@ class TrainingSupervisor(object):
         # Log to STDOUT.
         print("Training accuracy: {:.4f}, mean loss: {:.2f}".format(
             float(train_acc), float(train_loss)))
+
+    def _checkpoint(self):
+        """Checkpoint the current training process.
+
+        Args:
+        monitor: the metric value to monitor.
+        mode: one of {'min', 'max'}
+        """
+        # A helper function to check values by mode.
+        def _check_value(v1, v2, mode):
+            if (v1 < v2) & (mode == 'min'):
+                return True
+            elif (v1 > v2) & (mode == 'max'):
+                return True
+            else:
+                return False
+
+        # Get previous and current monitor values.
+        previous = self.schedule['monitor_value'].numpy()
+        current = self.monitor.result()
+
+        # For the first checkpoint, initialize the monitor value to make
+        # subsequent comparisons valid.
+        if previous == 0.0:
+            self.schedule['monitor_value'].assign(current)
+
+        # Is current model the best one we had ever seen?
+        if _check_value(current, previous, self.mode):
+            print("Monitor value improved from {:.4f} to {:.4f}."
+                  .format(previous, current))
+
+            # Update the schedule.
+            self.schedule['monitor_value'].assign(current)
+
+            # And save the model.
+            best_model_path = self.scout.save()
+            print("Best model found and saved: {}".format(best_model_path))
+        else:
+            print("Monitor value not improved: {:.4f}, latest: {:.4f}."
+                  .format(previous, current))
+
+        # Save a regular checkpoint.
+        self._reset_metrics()
+        ckpt_path = self.manager.save()
+        print("Checkpoint saved at global step: {}, to file: {}".format(
+            int(self.schedule['step']), ckpt_path))
