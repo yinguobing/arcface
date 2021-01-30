@@ -91,3 +91,23 @@ class TrainingSupervisor(object):
             self.checkpoint.restore(latest_checkpoint)
 
         print("Checkpoint restored: {}".format(latest_checkpoint))
+
+    @tf.function
+    def _train_step(self, x_batch, y_batch):
+        """Define the training step function."""
+
+        with tf.GradientTape() as tape:
+            # Run the forward propagation.
+            logits = self.model(x_batch, training=True)
+
+            # Calculate the loss value from targets and regularization.
+            loss = self.loss_fun(y_batch, logits) + sum(self.model.losses)
+
+        # Calculate the gradients.
+        grads = tape.gradient(loss, self.model.trainable_weights)
+
+        # Back propagation.
+        self.optimizer.apply_gradients(
+            zip(grads, self.model.trainable_weights))
+
+        return logits, loss
