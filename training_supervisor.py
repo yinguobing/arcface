@@ -25,8 +25,12 @@ class TrainingSupervisor(object):
         self.model = model
         self.optimizer = optimizer
         self.loss_fun = loss
-        self.metrics = metrics
         self.dataset = dataset
+        self.metrics = {
+            'categorical_accuracy': tf.keras.metrics.CategoricalAccuracy(
+                name='train_accuracy', dtype=tf.float32),
+            'loss': tf.keras.metrics.Mean(name="train_loss_mean",
+                                          dtype=tf.float32)}
 
         # Training schedule tracks the training progress. The training
         # supervisor uses this object to make training arrangement. The schedule
