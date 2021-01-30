@@ -9,7 +9,7 @@ from tqdm import tqdm
 class TrainingSupervisor(object):
     """A training supervisor will organize and monitor the training process."""
 
-    def __init__(self, model, optimizer, loss, metrics, training_dir) -> None:
+    def __init__(self, model, optimizer, loss, metrics, dataset, training_dir) -> None:
         """Training supervisor organizes and monitors the training process.
 
         Args:
@@ -17,6 +17,7 @@ class TrainingSupervisor(object):
             optimizer: a Keras optimizer used for training.
             loss: a Keras loss function.
             metrics: List of metrics to be evaluated during training.
+            dataset: the training dataset.
             training_dir: the directory to save the training files.
         """
         super().__init__()
@@ -25,6 +26,7 @@ class TrainingSupervisor(object):
         self.optimizer = optimizer
         self.loss_fun = loss
         self.metrics = metrics
+        self.dataset = dataset
 
         # Training schedule tracks the training progress. The training
         # supervisor uses this object to make training arrangement. The schedule
@@ -83,5 +85,3 @@ class TrainingSupervisor(object):
             self.checkpoint.restore(latest_checkpoint)
 
         print("Checkpoint restored: {}".format(latest_checkpoint))
-
-    
