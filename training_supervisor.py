@@ -1,6 +1,7 @@
 """This module provides the implementation of training supervisor."""
 
 import os
+from numpy.lib.npyio import save
 
 import tensorflow as tf
 from tqdm import tqdm
@@ -9,16 +10,16 @@ from tqdm import tqdm
 class TrainingSupervisor(object):
     """A training supervisor will organize and monitor the training process."""
 
-    def __init__(self, model, optimizer, loss, metrics, dataset, training_dir) -> None:
+    def __init__(self, model, optimizer, loss, dataset, training_dir, save_freq) -> None:
         """Training supervisor organizes and monitors the training process.
 
         Args:
             model: the Keras model to be trained.
             optimizer: a Keras optimizer used for training.
             loss: a Keras loss function.
-            metrics: List of metrics to be evaluated during training.
             dataset: the training dataset.
             training_dir: the directory to save the training files.
+            save_freq: integer, the supervisor saves the model at end of this many batches.
         """
         super().__init__()
         # Track the objects used for training.
@@ -26,6 +27,7 @@ class TrainingSupervisor(object):
         self.optimizer = optimizer
         self.loss_fun = loss
         self.dataset = dataset
+        self.save_freq = save_freq
         self.metrics = {
             'categorical_accuracy': tf.keras.metrics.CategoricalAccuracy(
                 name='train_accuracy', dtype=tf.float32),
@@ -136,3 +138,20 @@ class TrainingSupervisor(object):
         """Reset all the metrics."""
         for _, metric in self.metrics.items():
             metric.reset()
+
+    def _log_to_tensorboard(self):
+        """Log the training process to TensorBoard."""
+        # Get the parameters to log.
+        current_step = int(self.schedule['step'])
+        train_loss = self.metrics['loss'].result()
+        train_acc = self.metrics['categorical_accuracy'].result()
+        lr = self.optimizer._decayed_lr('float32')
+
+        with self.clerk.as_default():
+            tf.summary.scalar("loss", train_loss,   step=current_step)
+            tf.summary.scalar("accuracy", train_acc, step=current_step)
+            tf.summary.scalar("learning rate", lr, step=current_step)
+
+        # Log to STDOUT.
+        print("Training accuracy: {:.4f}, mean loss: {:.2f}".format(
+            float(train_acc), float(train_loss)))
