@@ -1,7 +1,6 @@
 """This module provides the implementation of training supervisor."""
 
 import os
-from numpy.lib.npyio import save
 
 import tensorflow as tf
 from tqdm import tqdm
@@ -30,6 +29,7 @@ class TrainingSupervisor(object):
         self.optimizer = optimizer
         self.loss_fun = loss
         self.dataset = dataset
+        self.data_generator = iter(self.dataset)
         self.save_freq = save_freq
         self.metrics = {
             'categorical_accuracy': tf.keras.metrics.CategoricalAccuracy(
@@ -54,7 +54,8 @@ class TrainingSupervisor(object):
             loss_fun=self.loss_fun,
             metrics=self.metrics,
             schedule=self.schedule,
-            monitor=self.monitor)
+            monitor=self.monitor,
+            dataset=self.data_generator)
 
         # A model manager is responsible for saving the current training
         # schedule and the model weights.
@@ -207,3 +208,67 @@ class TrainingSupervisor(object):
         ckpt_path = self.manager.save()
         print("Checkpoint saved at global step: {}, to file: {}".format(
             int(self.schedule['step']), ckpt_path))
+
+    def train(self, epochs, steps_per_epoch):
+        """Train the model for epochs.
+
+        Args:
+            epochs: an integer number of epochs to train the model.
+            steps_per_epoch: an integer numbers of steps for one epoch.
+        """
+        # In case the training is resumed, where are now?
+        initial_epoch = self.schedule['epoch'].numpy()
+        global_step = self.schedule['step'].numpy()
+        initial_step = global_step % steps_per_epoch
+
+        print("Resume training from global step: {}, epoch: {}".format(
+            global_step, initial_epoch))
+        print("Current step is: {}".format(initial_step))
+
+        # Start training loop.
+        for epoch in range(initial_epoch, epochs + 1):
+            # Log current epoch.
+            print("\nEpoch {}/{}".format(epoch, epochs))
+
+            # Visualize the training progress.
+            progress_bar = tqdm(total=steps_per_epoch, initial=initial_step,
+                                ascii="->", colour='#1cd41c')
+
+            # Iterate over the batches of the dataset
+            for x_batch, y_batch in self.data_generator:
+
+                # Train for one step.
+                logits, loss = self._train_step(x_batch, y_batch)
+
+                # Update the metrics.
+                self._update_metrics(y_batch, logits, loss)
+
+                # Update the training schedule.
+                self.schedule['step'].assign_add(1)
+
+                # Update the progress bar.
+                progress_bar.update(1)
+                progress_bar.set_postfix({
+                    "loss": "{:.2f}".format(loss.numpy()),
+                    "accuracy": "{:.3f}".format(
+                        self.metrics['categorical_accuracy'].result().numpy())})
+
+                # Log and checkpoint the model.
+                if int(self.schedule['step']) % self.save_freq == 0:
+                    self._log_to_tensorboard()
+                    self._checkpoint()
+
+            # Update the checkpoint epoch counter.
+            self.schedule['epoch'].assign_add(1)
+
+            # Reset the training dataset.
+            self.data_generator = iter(self.dataset)
+
+            # Save the last checkpoint.
+            self._log_to_tensorboard()
+            self._checkpoint()
+
+            # Clean up the progress bar.
+            progress_bar.close()
+
+        print("Training accomplished at epoch {}".format(epochs))
