@@ -54,3 +54,29 @@ class TrainingSupervisor(object):
         # A clerk writes the training logs to the TensorBoard.
         self.clerk = tf.summary.create_file_writer(
             os.path.join(training_dir, 'logs'))
+
+    def restore(self, weights_only=False):
+        """Restore training process from previous training checkpoint.
+
+        Args:
+            weights_only: only restore the model weights. Default is False.
+        """
+        # Are there any checkpoint files?
+        latest_checkpoint = self.manager.latest_checkpoint
+
+        if latest_checkpoint:
+            print("Checkpoint found: {}".format(latest_checkpoint))
+        else:
+            print("WARNING: Checkpoint not found. Model will be initialized \
+                from scratch.")
+
+        print("Restoring..")
+
+        if weights_only:
+            print("Only the model weights will be restored.")
+            checkpoint = tf.train.Checkpoint(self.model)
+            checkpoint.restore(latest_checkpoint)
+        else:
+            self.checkpoint.restore(latest_checkpoint)
+
+        print("Checkpoint restored: {}".format(latest_checkpoint))
