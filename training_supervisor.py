@@ -10,7 +10,7 @@ from tqdm import tqdm
 class TrainingSupervisor(object):
     """A training supervisor will organize and monitor the training process."""
 
-    def __init__(self, model, optimizer, loss, dataset, training_dir, save_freq) -> None:
+    def __init__(self, model, optimizer, loss, dataset, training_dir, save_freq, monitor) -> None:
         """Training supervisor organizes and monitors the training process.
 
         Args:
@@ -20,8 +20,11 @@ class TrainingSupervisor(object):
             dataset: the training dataset.
             training_dir: the directory to save the training files.
             save_freq: integer, the supervisor saves the model at end of this many batches.
+            monitor: the metric name to monitor.
+            mode: one of {'min', 'max'}
         """
         super().__init__()
+
         # Track the objects used for training.
         self.model = model
         self.optimizer = optimizer
@@ -33,13 +36,15 @@ class TrainingSupervisor(object):
                 name='train_accuracy', dtype=tf.float32),
             'loss': tf.keras.metrics.Mean(name="train_loss_mean",
                                           dtype=tf.float32)}
+        self.monitor = self.metrics[monitor]
 
         # Training schedule tracks the training progress. The training
         # supervisor uses this object to make training arrangement. The schedule
         # is saved in the checkpoint and maintained by the manager.
         self.schedule = {
             'step': tf.Variable(0, trainable=False, dtype=tf.int64),
-            'epoch': tf.Variable(1, trainable=False, dtype=tf.int64)}
+            'epoch': tf.Variable(1, trainable=False, dtype=tf.int64),
+            'monitor_value': tf.Variable(0, trainable=False, dtype=tf.float32)}
 
         # Both the model and the training status shall be tracked. A TensorFlow
         # checkpoint is the best option to fullfill this job.
@@ -48,7 +53,8 @@ class TrainingSupervisor(object):
             optimizer=self.optimizer,
             loss_fun=self.loss_fun,
             metrics=self.metrics,
-            schedule=self.schedule)
+            schedule=self.schedule,
+            monitor=self.monitor)
 
         # A model manager is responsible for saving the current training
         # schedule and the model weights.
