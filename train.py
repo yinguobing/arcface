@@ -147,6 +147,7 @@ if __name__ == "__main__":
     # training from manually selected checkpoint. In this case some training
     # objects should be overridden before training started.
     if args.override:
+        supervisor.override(0, 1)
         print("Training process overridden by user.")
 
     # Now it is safe to staring training.
