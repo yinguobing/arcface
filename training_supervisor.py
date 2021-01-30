@@ -53,7 +53,6 @@ class TrainingSupervisor(object):
         self.checkpoint = tf.train.Checkpoint(
             model=self.model,
             optimizer=self.optimizer,
-            loss_fun=self.loss_fun,
             metrics=self.metrics,
             schedule=self.schedule,
             monitor=self.monitor,
