@@ -145,7 +145,7 @@ class TrainingSupervisor(object):
     def _reset_metrics(self):
         """Reset all the metrics."""
         for _, metric in self.metrics.items():
-            metric.reset()
+            metric.reset_states
 
     def _log_to_tensorboard(self):
         """Log the training process to TensorBoard."""
