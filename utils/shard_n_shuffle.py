@@ -4,18 +4,21 @@ The shuffling process required adequate free spaces that should be more than
 double of the TFRecord file size. Keep this in mind or you may get a incomplete
 dataset compared with the original one.
 """
+import os
+import time
+
 import numpy as np
 import tensorflow as tf
-import time
-import os
+from tqdm import tqdm
 
 
-def shuffle_once(input_file, output_file):
+def shuffle_once(input_file, output_file, total_samples=None):
     """Make a new record file with shuffled samples from the input record file.
 
     Args:
-        record_file: the target file to be shuffled.
-        rounds: number of rounds the file will be shuffled.
+        input_file: the target file to be shuffled.
+        output_file: the output file.
+        total_samples: number of total samples.
 
     Returns:
         the shuffled record file path.
@@ -40,6 +43,10 @@ def shuffle_once(input_file, output_file):
     counter = 0
     starting = time.time()
 
+    # Use a progress bar to track the progress.
+    if total_samples:
+        p_bar = tqdm(total=total_samples)
+
     while True:
         if mini_batch_indices.size == 0:
             break
@@ -57,8 +64,14 @@ def shuffle_once(input_file, output_file):
                 break
             else:
                 writer.write(example.numpy())
-                counter += 1
-                print("Sample processed: {}".format(counter), "\033[1A")
+                if total_samples:
+                    p_bar.update(1)
+                else:
+                    counter += 1
+                    print("Sample processed: {}".format(counter), "\033[1A")
+
+    if total_samples:
+        p_bar.close()
 
     print("Total samples: {}".format(counter))
     print("Elapsed time: {}".format(
@@ -67,7 +80,7 @@ def shuffle_once(input_file, output_file):
     writer.close()
 
 
-def shuffle(record_file, rounds=1):
+def shuffle(record_file, rounds=1, total_samples=None):
     """Shuffle the record file N times.
 
     Args:
@@ -84,10 +97,10 @@ def shuffle(record_file, rounds=1):
         print("Round {} of total {}".format(round, rounds))
 
         if round == 0:
-            shuffle_once(record_file, temp_pair[1])
+            shuffle_once(record_file, temp_pair[1], total_samples)
         else:
             temp_pair.reverse()
-            shuffle_once(temp_pair[0], temp_pair[1])
+            shuffle_once(temp_pair[0], temp_pair[1], total_samples)
 
     os.rename(temp_pair[1], output_file)
     if rounds > 1:
@@ -102,6 +115,6 @@ if __name__ == "__main__":
     rounds = 3
 
     # Shuffling..
-    shuffle(record_file, rounds)
+    shuffle(record_file, rounds, 5822653)
 
     print("All done.")
