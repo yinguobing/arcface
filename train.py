@@ -135,13 +135,15 @@ if __name__ == "__main__":
                                     'max',
                                     name)
 
-    # Restore the latest model if checkpoints are available.
-    supervisor.restore(args.restore_weights_only)
-
     # If training accomplished, save the base model for inference.
     if args.export_only:
+        print("The best model will be exported.")
+        supervisor.restore(args.restore_weights_only, True)
         supervisor.export(base_model, export_dir)
         quit()
+
+    # Restore the latest model if checkpoints are available.
+    supervisor.restore(args.restore_weights_only)
 
     # Sometimes the training process might go wrong and we would like to resume
     # training from manually selected checkpoint. In this case some training

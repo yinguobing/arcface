@@ -76,14 +76,18 @@ class TrainingSupervisor(object):
         self.clerk = tf.summary.create_file_writer(
             os.path.join(training_dir, 'logs', name))
 
-    def restore(self, weights_only=False):
+    def restore(self, weights_only=False, from_scout=False):
         """Restore training process from previous training checkpoint.
 
         Args:
             weights_only: only restore the model weights. Default is False.
+            from_scout: restore from the checkpoint saved by model scout.
         """
         # Are there any checkpoint files?
-        latest_checkpoint = self.manager.latest_checkpoint
+        if from_scout:
+            latest_checkpoint = self.scout.latest_checkpoint
+        else:
+            latest_checkpoint = self.manager.latest_checkpoint
 
         if latest_checkpoint:
             print("Checkpoint found: {}".format(latest_checkpoint))
