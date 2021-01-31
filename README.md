@@ -126,6 +126,15 @@ Exported model will be saved in `saved_model` format in directory `exported`. Yo
 python3 train.py --export_only=True
 ```
 
+## Inference
+Once the model is exported, you can use `predict.py` to recognize faces. Please prepare some sample images and set them in the file. Then run
+
+```bash
+python3 predict.py
+```
+
+The most similar sample pairs will be printed. You can also use threshold to filter the results.
+
 ## Authors
 Yin Guobing (尹国冰) - [yinguobing](https://yinguobing.com)
 
