@@ -62,8 +62,14 @@ name = "hrnetv2"
 These files do not change frequently so set them in the source code.
 
 ```python
-# Training data.
+# Where is the training file?
 train_files = "/path/to/train.record"
+
+# How many identities do you have in the training dataset?
+num_ids = 85742
+
+# How many examples do you have in the training dataset?
+num_examples = 5822653
 ```
 
 ### Setup the model parameters
@@ -74,12 +80,6 @@ input_shape = (112, 112, 3)
 
 # What is the size of the embeddings that represent the faces?
 embedding_size = 512
-
-# How many identities do you have in the training dataset?
-num_ids = 85742
-
-# How many examples do you have in the training dataset?
-num_examples = 5822653
 ```
 
 ### Start training
