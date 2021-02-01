@@ -302,9 +302,12 @@ if __name__ == '__main__':
 
     # Video output by video writer.
     if args.write_video:
-        height, width = sample_frame.shape[:2]
+        fourcc = cv2.VideoWriter_fourcc('a', 'v', 'c', '1')
+        width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+        height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+        frame_rate = cap.get(cv2.CAP_PROP_FPS)
         video_writer = cv2.VideoWriter(
-            'output.avi', cv2.VideoWriter_fourcc(*'x264'), 30, (width, height))
+            "output.avi", fourcc, frame_rate, (width, height))
 
     # Construct a face detector.
     face_detector = FaceDetector()
@@ -323,7 +326,7 @@ if __name__ == '__main__':
             frame = cv2.flip(frame, 2)
 
         # Get face area images.
-        faceboxes = face_detector.extract_cnn_faceboxes(frame, 0.6, 0.99)
+        faceboxes = face_detector.extract_cnn_faceboxes(frame, 0.5, 0.99)
 
         if faceboxes:
             faces = []
