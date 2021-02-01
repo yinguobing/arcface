@@ -60,6 +60,32 @@ class WanderingAI():
 
         return distances
 
+    def _match(self, distances, threshold):
+        """Find out the matching result from the distances array.
+
+        Args:
+            distances: the distances array.
+            threshold: the threshold to filter the negative samples.
+
+        Returns:
+            the matching results [[person, candidate], ...].
+        """
+        matched_pairs = []
+        distances = np.array(distances, dtype=np.float32)
+        num_results = np.min(distances.shape)
+
+        for _ in range(num_results):
+            min_distance = np.min(distances, axis=None)
+            if min_distance > threshold:
+                break
+            arg_min = np.argmin(distances, axis=None)
+            row, col = np.unravel_index(arg_min, distances.shape)
+            matched_pairs.append([row, col, min_distance])
+            distances[row, :] = 666
+            distances[:, col] = 666
+
+        return matched_pairs
+
     def remember(self, images):
         """Let AI remember the input faces.
 
@@ -69,11 +95,12 @@ class WanderingAI():
         inputs = normalize(images)
         self.identities = self._get_embeddings(inputs)
 
-    def identify(self, images):
+    def identify(self, images, threshold):
         """Find the most similar persons from the input images.
 
         Args:
             images: a batch of images to be investgated.
+            threshold: a threshold value to filter the results.
 
         Returns:
             the coresponding person's index
@@ -81,9 +108,9 @@ class WanderingAI():
         inputs = normalize(images)
         embeddings = self._get_embeddings(inputs)
         distances = self._get_distances(self.identities, embeddings)
-        indices = tf.math.argmin(distances, axis=1)
+        results = self._match(distances, threshold)
 
-        return indices
+        return results
 
 
 def _read_in(image_path):
@@ -252,13 +279,15 @@ class FaceDetector:
 
 if __name__ == '__main__':
     # Summon an AI to recognize faces.
-    # ai = WanderingAI('exported/hrnetv2')
+    ai = WanderingAI('exported/hrnetv2')
 
-    # # Tell the AI to remember these faces.
-    # faces_to_remember = ["/home/robin/Pictures/resources/img_2.jpg",
-    #                      "/home/robin/Pictures/resources/img_16.jpg"]
-    # targets = [_read_in(x) for x in faces_to_remember]
-    # ai.remember(targets)
+    # Tell the AI to remember these faces.
+    faces_to_remember = ["/home/robin/Pictures/wanda.jpg",
+                         "/home/robin/Pictures/vision.jpg",
+                         "/home/robin/Pictures/monica.jpg"]
+    names = ["Wonda", "Vision", "Monica"]
+    targets = [_read_in(x) for x in faces_to_remember]
+    ai.remember(targets)
 
     # Video source from webcam or video file.
     video_src = args.cam if args.cam is not None else args.video
@@ -294,7 +323,7 @@ if __name__ == '__main__':
             frame = cv2.flip(frame, 2)
 
         # Get face area images.
-        faceboxes = face_detector.extract_cnn_faceboxes(frame, 0.6, 0.9)
+        faceboxes = face_detector.extract_cnn_faceboxes(frame, 0.6, 0.99)
 
         if faceboxes:
             faces = []
@@ -309,21 +338,22 @@ if __name__ == '__main__':
             faces = np.array(faces, dtype=np.float32)
 
             # Do prediction.
-            # heatmap_group = model.predict(faces)
+            results = ai.identify(faces, 0.90)
 
-            # # Parse the heatmaps to get mark locations.
-            # mark_group = []
-            # heatmap_grids = []
-            # for facebox, heatmaps in zip(faceboxes, heatmap_group):
-            #     width = height = (facebox[2] - facebox[0])
-            #     marks, heatmap_grid = parse_heatmaps(heatmaps, (width, height))
+            # Draw the names on image.
+            labels = ["Nobody"] * len(faceboxes)
+            values = [0] * len(faceboxes)
+            for p_id, c_id, distance in results:
+                labels[c_id] = names[p_id]
+                values[c_id] = distance
 
-            #     # Convert the marks locations from local CNN to global image.
-            #     marks[:, 0] += facebox[0]
-            #     marks[:, 1] += facebox[1]
-
-            #     mark_group.append(marks)
-            #     heatmap_grids.append(heatmap_grid)
+            for label, value, box in zip(labels, values, faceboxes):
+                x1, y1, x2, y2 = box
+                cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
+                cv2.putText(frame, "{}: {:.3f}".format(label, value), (x1, y1-5),
+                            cv2.FONT_HERSHEY_DUPLEX, 0.6, (0, 255, 0))
+                cv2.putText(frame, "{}".format(len(results)), (10, 10),
+                            cv2.FONT_HERSHEY_DUPLEX, 0.6, (0, 255, 0))
 
             # Draw the marks and the facebox in the original frame.
             # draw_marks(frame, mark_group)
