@@ -302,12 +302,12 @@ if __name__ == '__main__':
 
     # Video output by video writer.
     if args.write_video:
-        fourcc = cv2.VideoWriter_fourcc('x', '2', '6', '4')
+        fourcc = cv2.VideoWriter_fourcc('a', 'v', 'c', '1')
         width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
         height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
         frame_rate = cap.get(cv2.CAP_PROP_FPS)
         video_writer = cv2.VideoWriter(
-            "output.mp4", fourcc, frame_rate, (width, height))
+            "output.avi", fourcc, frame_rate, (width, height))
 
     # Construct a face detector.
     face_detector = FaceDetector()
