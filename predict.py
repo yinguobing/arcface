@@ -326,7 +326,9 @@ if __name__ == '__main__':
             frame = cv2.flip(frame, 2)
 
         # Get face area images.
-        faceboxes = face_detector.extract_cnn_faceboxes(frame, 0.5, 0.99)
+        faceboxes = face_detector.extract_cnn_faceboxes(frame, 0.5, 1.0)
+
+        color_palette = [(54, 84, 160), [160, 84, 54], [84, 160, 54]]
 
         if faceboxes:
             faces = []
@@ -346,21 +348,20 @@ if __name__ == '__main__':
             # Draw the names on image.
             labels = ["Nobody"] * len(faceboxes)
             values = [0] * len(faceboxes)
+            colors = [(54, 54, 54)] * len(faceboxes)
+
             for p_id, c_id, distance in results:
                 labels[c_id] = names[p_id]
                 values[c_id] = distance
+                colors[c_id] = color_palette[p_id]
 
-            for label, value, box in zip(labels, values, faceboxes):
+            for label, value, box, color in zip(labels, values, faceboxes, colors):
                 x1, y1, x2, y2 = box
-                cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
-                cv2.putText(frame, "{}: {:.3f}".format(label, value), (x1, y1-5),
-                            cv2.FONT_HERSHEY_DUPLEX, 0.6, (0, 255, 0))
-                cv2.putText(frame, "{}".format(len(results)), (10, 10),
-                            cv2.FONT_HERSHEY_DUPLEX, 0.6, (0, 255, 0))
-
-            # Draw the marks and the facebox in the original frame.
-            # draw_marks(frame, mark_group)
-            face_detector.draw_box(frame, faceboxes)
+                cv2.rectangle(frame, (x1, y1), (x2, y2), color, 4, cv2.LINE_8)
+                cv2.rectangle(frame, (x1-2, y1),
+                              (x2+2, y1-40), color, cv2.FILLED)
+                cv2.putText(frame, "{}: {:.2f}".format(label, value), (x1+7, y1-10),
+                            cv2.FONT_HERSHEY_DUPLEX, 0.9, (255, 255, 255), 2, cv2.LINE_AA)
 
         # Show the result in windows.
         cv2.imshow('image', frame)
