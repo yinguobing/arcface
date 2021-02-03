@@ -285,7 +285,7 @@ if __name__ == '__main__':
     faces_to_remember = ["/home/robin/Pictures/wanda.jpg",
                          "/home/robin/Pictures/vision.jpg",
                          "/home/robin/Pictures/monica.jpg"]
-    names = ["Wonda", "Vision", "Monica"]
+    names = ["Wanda", "Vision", "Monica"]
     targets = [_read_in(x) for x in faces_to_remember]
     ai.remember(targets)
 
