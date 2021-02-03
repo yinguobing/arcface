@@ -1,6 +1,10 @@
 # arcface
 A TensorFlow implementation of [ArcFace](https://arxiv.org/abs/1801.07698) for face recognition.
 
+![demo](docs/demo.gif)
+
+Video Demo: [TensorFlow Face Recognition Demo (Bilibili)](https://www.bilibili.com/video/BV16T4y1P72j/)
+
 ## Features
  - Build with TensorFlow 2.4 Keras API
  - Advanced model architecture: HRNet v2
