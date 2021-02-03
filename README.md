@@ -131,13 +131,13 @@ python3 train.py --export_only=True
 ```
 
 ## Inference
-Once the model is exported, you can use `predict.py` to recognize faces. Please prepare some sample images and set them in the file. Then run
+Once the model is exported, you can use `predict.py` to recognize faces. Please prepare some sample face images and set the paths in the python file. Then run
 
 ```bash
-python3 predict.py
+python3 predict.py --video /path/to/video.mp4
 ```
 
-The most similar sample pairs will be printed. You can also use threshold to filter the results.
+The most similar faces will be marked in the video frames. You can also use threshold to filter the results.
 
 ## Authors
 Yin Guobing (尹国冰) - [yinguobing](https://yinguobing.com)
