@@ -124,7 +124,10 @@ def evaluate(dataset, model, batch_size, num_folds=10):
         num_fold: test number of folds.
 
     Returns:
-        the accuracy and the std.
+        tpr_list: the true positive rate list.
+        fpr_list: the false positive rate list.
+        acc_list: the accuracy list.
+        thresholds: the threshold list.
     """
     images, labels = dataset
     images = tf.data.Dataset.from_tensor_slices(images).batch(batch_size)
@@ -157,7 +160,7 @@ def evaluate(dataset, model, batch_size, num_folds=10):
         fpr_list.append(fpr)
         acc_list.append(acc)
 
-    return tpr_list, fpr_list, acc_list
+    return tpr_list, fpr_list, acc_list, thresholds.tolist()
 
 
 if __name__ == '__main__':
@@ -175,8 +178,9 @@ if __name__ == '__main__':
 
     # Run the evaluations.
     batch_size = 100
-    tprs, fprs, accs = evaluate(data_set, ai, batch_size)
-    print("{} Max accuracy: {:.4f}".format(test_set_name, max(accs)))
+    tprs, fprs, accs, thresholds = evaluate(data_set, ai, batch_size)
+    print("{} Max accuracy: {:.4f}, threshold: {}".format(
+        test_set_name, max(accs), thresholds[np.argmax(accs)]))
 
     # Draw the ROC curve.
     plt.plot(fprs, tprs, linewidth=2.0)
