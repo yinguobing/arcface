@@ -54,20 +54,25 @@ class WanderingAI():
 
         return embeddings
 
-    def _get_distances(self, embeddings_1, embeddings_2):
+    def _get_distances(self, embeddings_1, embeddings_2, element_wise=False):
         """Return the distances between input embeddings.
 
         Args:
             embeddings_1: the first batch of embeddings.
             embeddings_2: the second batch of embeddings.
+            element_wise: get distances element wise.
 
         Returns:
-            the distances.
+            the distances list.
         """
-        distances = []
-        for embedding_1 in tf.unstack(embeddings_1):
-            s_diff = tf.math.squared_difference(embedding_1, embeddings_2)
-            distances.append(tf.reduce_sum(s_diff, axis=1))
+        if element_wise:
+            s_diff = tf.math.squared_difference(embeddings_1, embeddings_2)
+            distances = tf.unstack(tf.reduce_sum(s_diff, axis=1))
+        else:
+            distances = []
+            for embedding_1 in tf.unstack(embeddings_1):
+                s_diff = tf.math.squared_difference(embedding_1, embeddings_2)
+                distances.append(tf.reduce_sum(s_diff, axis=1))
 
         return distances
 
