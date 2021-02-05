@@ -5,7 +5,6 @@ with TensorFlow. You can find the original file here:
 https://github.com/deepinsight/insightface/blob/master/recognition/ArcFace/verification.py
 """
 
-import argparse
 import os
 import pickle
 
@@ -141,14 +140,23 @@ def evaluate(dataset, model, batch_size, num_folds=10):
 
     print("Calculate distances..")
     distances = model._get_distances(embeddings_1, embeddings_2, True)
-    print("Distances got.")
+    distance_min = min(distances)
+    distance_max = max(distances)
+    print("Distances got. Min: {:.4f}, Max: {:.4f}".format(
+        distance_min, distance_max))
 
-    threshold = 0.9
-    distances = np.array(distances, dtype=np.float32)
-    labels = np.array(labels)
-    tpr, fpr, accuracy = calculate_accuracy(distances, labels, threshold)
+    thresholds = np.arange(0, np.ceil(distance_max), 0.01)
+    tpr_list = []
+    fpr_list = []
+    acc_list = []
+    for threshold in thresholds:
+        tpr, fpr, acc = calculate_accuracy(np.array(distances, dtype=np.float32),
+                                           np.array(labels), threshold)
+        tpr_list.append(tpr)
+        fpr_list.append(fpr)
+        acc_list.append(acc)
 
-    return tpr, fpr, accuracy
+    return tpr_list, fpr_list, acc_list
 
 
 if __name__ == '__main__':
@@ -166,7 +174,5 @@ if __name__ == '__main__':
 
     # Run the evaluations.
     batch_size = 100
-    tpr, fpr, acc = evaluate(data_set, ai, batch_size)
-    print("{} accuracy: {:.4f}".format(test_set_name, acc))
-    print("{} TPR: {:.4f}".format(test_set_name, tpr))
-    print("{} FPR: {:.4f}".format(test_set_name, fpr))
+    tprs, fprs, accs = evaluate(data_set, ai, batch_size)
+    print("{} Max accuracy: {:.4f}".format(test_set_name, max(accs)))
