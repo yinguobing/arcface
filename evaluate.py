@@ -67,61 +67,56 @@ def calculate_accuracy(distances, labels, threshold):
 
 
 def calculate_roc(distances, labels, thresholds, num_folds=10):
-    """Calculate the true positive rate, false positive rate, and accuracy.
+    """Calculate the true positive rates, false positive rates, and accuracy.
 
     Args:
         distances: a numpy array of distances.
         labels: a numpy array of labels.
         threshold: a list of threshold values.
+        num_folds: the number of folds.
 
     Returns:
-        the true positive rate, the false positive rate and the accuracy.
+        the true positive rates, the false positive rates and the accuracy.
     """
     tpr_list = []
     fpr_list = []
     acc_list = []
 
-    if num_folds == 0:
+    print("Run evaluation for {} folds.".format(num_folds))
+
+    folds = KFold(n_splits=num_folds, shuffle=False).split(
+        np.arange(len(labels)))
+
+    for train_set, test_set in folds:
+        _tpr_fold = []
+        _fpr_fold = []
+        _acc_fold = []
+
         for threshold in thresholds:
-            tpr, fpr, acc = calculate_accuracy(distances, labels, threshold)
-            tpr_list.append(tpr)
-            fpr_list.append(fpr)
-            acc_list.append(acc)
-    else:
-        print("Run evaluation for {} folds.".format(num_folds))
-
-        folds = KFold(n_splits=num_folds, shuffle=False).split(
-            np.arange(len(labels)))
-
-        for train_set, test_set in folds:
-            _tprs = []
-            _fprs = []
-            _acc = []
-
-            for threshold in thresholds:
-                _, _, acc = calculate_accuracy(
-                    distances[train_set], labels[train_set], threshold)
-                _acc.append(acc)
-
-                tpr, fpr, _ = calculate_accuracy(
-                    distances[test_set], labels[test_set], threshold)
-                _tprs.append(tpr)
-                _fprs.append(fpr)
-
-            # Find the best threshold for the current fold.
-            best_threshold = thresholds[np.argmax(_acc)]
-
-            # Get the accuracy with the BEST threshold.
             _, _, acc = calculate_accuracy(
-                distances[test_set], labels[test_set], best_threshold)
+                distances[train_set], labels[train_set], threshold)
+            _acc_fold.append(acc)
 
-            # Summary current fold.
-            tpr_list.append(_tprs)
-            fpr_list.append(_tprs)
-            acc_list.append(acc)
+            tpr, fpr, _ = calculate_accuracy(
+                distances[test_set], labels[test_set], threshold)
+            _tpr_fold.append(tpr)
+            _fpr_fold.append(fpr)
 
-        tpr_list = np.mean(np.array(tpr_list), 0)
-        fpr_list = np.mean(np.array(fpr_list), 0)
+        # Find the best threshold for the current fold.
+        best_threshold = thresholds[np.argmax(_acc_fold)]
+        print("Best threshold: {}".format(best_threshold))
+
+        # Get the accuracy with the BEST threshold.
+        _, _, acc = calculate_accuracy(
+            distances[test_set], labels[test_set], best_threshold)
+
+        # Summary current fold.
+        tpr_list.append(_tpr_fold)
+        fpr_list.append(_tpr_fold)
+        acc_list.append(acc)
+
+    tpr_list = np.mean(np.array(tpr_list), 0)
+    fpr_list = np.mean(np.array(fpr_list), 0)
 
     return tpr_list, fpr_list, acc_list
 
@@ -168,7 +163,10 @@ def evaluate(dataset, model, batch_size, num_folds=10):
                                                  thresholds,
                                                  num_folds)
 
-    return tpr_list, fpr_list, acc_list, thresholds.tolist()
+    acc = np.mean(acc_list)
+    std = np.std(acc_list)
+
+    return tpr_list, fpr_list, acc, std
 
 
 if __name__ == '__main__':
@@ -186,9 +184,8 @@ if __name__ == '__main__':
 
     # Run the evaluations.
     batch_size = 100
-    tprs, fprs, accs, thresholds = evaluate(data_set, ai, batch_size)
-    print("{} Max accuracy: {:.4f}, threshold: {}".format(
-        test_set_name, max(accs), thresholds[np.argmax(accs)]))
+    tprs, fprs, acc, std = evaluate(data_set, ai, batch_size)
+    print("{} max accuracy: {:.4f} ± {:.4f}".format(test_set_name, acc, std))
 
     # Draw the ROC curve.
     plt.plot(fprs, tprs, linewidth=2.0)
