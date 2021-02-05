@@ -8,6 +8,7 @@ https://github.com/deepinsight/insightface/blob/master/recognition/ArcFace/verif
 import os
 import pickle
 
+import matplotlib.pyplot as plt
 import numpy as np
 import tensorflow as tf
 from sklearn.model_selection import KFold
@@ -176,3 +177,10 @@ if __name__ == '__main__':
     batch_size = 100
     tprs, fprs, accs = evaluate(data_set, ai, batch_size)
     print("{} Max accuracy: {:.4f}".format(test_set_name, max(accs)))
+
+    # Draw the ROC curve.
+    plt.plot(fprs, tprs, linewidth=2.0)
+    plt.xlabel('False positive rate')
+    plt.ylabel('True positive rate')
+    plt.suptitle('ROC of {}'.format(test_set_name))
+    plt.show()
