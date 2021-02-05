@@ -1,4 +1,4 @@
-"""Evaluation on the Labeled Faces in the Wild dataset 
+"""Evaluation on the Labeled Faces in the Wild dataset
 
 This file is modified from the ArcFace official implementation in order to run
 with TensorFlow. You can find the original file here:
@@ -66,52 +66,64 @@ def calculate_accuracy(distances, labels, threshold):
     return tpr, fpr, accuracy
 
 
-def calculate_folded_accuracy(distances, labels, threshold, num_folds=10):
-    """Calculate the folded true positive rate, false positive rate, and accuracy.
+def calculate_roc(distances, labels, thresholds, num_folds=10):
+    """Calculate the true positive rate, false positive rate, and accuracy.
 
     Args:
         distances: a numpy array of distances.
         labels: a numpy array of labels.
-        threshold: the threshold value.
+        threshold: a list of threshold values.
 
     Returns:
         the true positive rate, the false positive rate and the accuracy.
     """
+    tpr_list = []
+    fpr_list = []
+    acc_list = []
 
-    labels = np.asarray(labels)
-    num_pairs = len(labels)
-    num_thresholds = len(thresholds)
-    k_fold = KFold(n_splits=num_folds, shuffle=False)
+    if num_folds == 0:
+        for threshold in thresholds:
+            tpr, fpr, acc = calculate_accuracy(distances, labels, threshold)
+            tpr_list.append(tpr)
+            fpr_list.append(fpr)
+            acc_list.append(acc)
+    else:
+        print("Run evaluation for {} folds.".format(num_folds))
 
-    tprs = np.zeros((num_folds, num_thresholds))
-    fprs = np.zeros((num_folds, num_thresholds))
+        folds = KFold(n_splits=num_folds, shuffle=False).split(
+            np.arange(len(labels)))
 
-    accuracy = np.zeros((num_folds))
-    indices = np.arange(num_pairs)
+        for train_set, test_set in folds:
+            _tprs = []
+            _fprs = []
+            _acc = []
 
-    print("Run evaluation for {} folds.".format(num_folds))
-    for fold_idx, (train_set, test_set) in enumerate(k_fold.split(indices)):
-        print("Fold {}".format(fold_idx))
-        # Find the best threshold for the current fold.
-        acc_train = np.zeros((num_thresholds))
-        for threshold_idx, threshold in enumerate(thresholds):
-            _, _, acc_train[threshold_idx] = calculate_accuracy(
-                threshold, distances[train_set], labels[train_set])
-        best_threshold_index = np.argmax(acc_train)
-        print('threshold', thresholds[best_threshold_index])
+            for threshold in thresholds:
+                _, _, acc = calculate_accuracy(
+                    distances[train_set], labels[train_set], threshold)
+                _acc.append(acc)
 
-        for threshold_idx, threshold in enumerate(thresholds):
-            tprs[fold_idx, threshold_idx], fprs[fold_idx, threshold_idx], _ = calculate_accuracy(
-                threshold, distances[test_set],
-                labels[test_set])
+                tpr, fpr, _ = calculate_accuracy(
+                    distances[test_set], labels[test_set], threshold)
+                _tprs.append(tpr)
+                _fprs.append(fpr)
 
-        _, _, accuracy[fold_idx] = calculate_accuracy(
-            thresholds[best_threshold_index], distances[test_set],
-            labels[test_set])
+            # Find the best threshold for the current fold.
+            best_threshold = thresholds[np.argmax(_acc)]
 
-    tpr = np.mean(tprs, 0)
-    fpr = np.mean(fprs, 0)
-    return tpr, fpr, accuracy
+            # Get the accuracy with the BEST threshold.
+            _, _, acc = calculate_accuracy(
+                distances[test_set], labels[test_set], best_threshold)
+
+            # Summary current fold.
+            tpr_list.append(_tprs)
+            fpr_list.append(_tprs)
+            acc_list.append(acc)
+
+        tpr_list = np.mean(np.array(tpr_list), 0)
+        fpr_list = np.mean(np.array(fpr_list), 0)
+
+    return tpr_list, fpr_list, acc_list
 
 
 def evaluate(dataset, model, batch_size, num_folds=10):
@@ -150,15 +162,11 @@ def evaluate(dataset, model, batch_size, num_folds=10):
         distance_min, distance_max))
 
     thresholds = np.arange(0, np.ceil(distance_max), 0.01)
-    tpr_list = []
-    fpr_list = []
-    acc_list = []
-    for threshold in thresholds:
-        tpr, fpr, acc = calculate_accuracy(np.array(distances, dtype=np.float32),
-                                           np.array(labels), threshold)
-        tpr_list.append(tpr)
-        fpr_list.append(fpr)
-        acc_list.append(acc)
+
+    tpr_list, fpr_list, acc_list = calculate_roc(np.array(distances, dtype=np.float32),
+                                                 np.array(labels),
+                                                 thresholds,
+                                                 num_folds)
 
     return tpr_list, fpr_list, acc_list, thresholds.tolist()
 
