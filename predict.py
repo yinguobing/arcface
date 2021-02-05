@@ -29,6 +29,17 @@ class WanderingAI():
         self.model = tf.keras.models.load_model(model_path)
         self.identities = None
 
+    def _preprocess(self, inputs):
+        """Preprocess the input images.
+
+        Args:
+            inputs: a batch of raw images.
+
+        Returns:
+            a batch of processed images as tensors.
+        """
+        return normalize(inputs)
+
     def _get_embeddings(self, inputs):
         """Return the face embeddings of the inputs tensor.
 
@@ -92,7 +103,7 @@ class WanderingAI():
         Args:
             images: the face images of the targets to remember.
         """
-        inputs = normalize(images)
+        inputs = self._preprocess(images)
         self.identities = self._get_embeddings(inputs)
 
     def identify(self, images, threshold):
@@ -105,7 +116,7 @@ class WanderingAI():
         Returns:
             the coresponding person's index
         """
-        inputs = normalize(images)
+        inputs = self._preprocess(images)
         embeddings = self._get_embeddings(inputs)
         distances = self._get_distances(self.identities, embeddings)
         results = self._match(distances, threshold)
