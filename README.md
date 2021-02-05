@@ -129,6 +129,12 @@ Exported model will be saved in `saved_model` format in directory `exported`. Yo
 ```bash
 python3 train.py --export_only=True
 ```
+## Evaluation
+Once the model is exported, you can run an evaluation of the model with test datasets like LFW, etc.
+```bash
+python3 evaluate.py
+```
+Check the module code before running. It should not be difficult.
 
 ## Inference
 Once the model is exported, you can use `predict.py` to recognize faces. Please prepare some sample face images and set the paths in the python file. Then run
