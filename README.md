@@ -19,9 +19,18 @@ These instructions will get you a copy of the project up and running on your loc
 
 ### Prerequisites
 
-![TensorFlow](https://img.shields.io/badge/TensorFlow-v2.4-brightgreen)
-![OpenCV](https://img.shields.io/badge/OpenCV-v4.3-brightgreen)
+For training
+
+ ![TensorFlow](https://img.shields.io/badge/TensorFlow-v2.4-brightgreen)
+
+Additional packages for evaluation
+
 ![Numpy](https://img.shields.io/badge/Numpy-v1.17-brightgreen)
+![Matplotlib](https://img.shields.io/badge/Matplotlib-v3.3.3-brightgreen)
+
+Additional packages for inference with video
+
+![OpenCV](https://img.shields.io/badge/OpenCV-v4.5-brightgreen)
 
 ### Installing
 #### Get the source code for training
