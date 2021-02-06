@@ -112,7 +112,7 @@ def calculate_roc(distances, labels, thresholds, num_folds=10):
 
         # Summary current fold.
         tpr_list.append(_tpr_fold)
-        fpr_list.append(_tpr_fold)
+        fpr_list.append(_fpr_fold)
         acc_list.append(acc)
 
     tpr_list = np.mean(np.array(tpr_list), 0)
