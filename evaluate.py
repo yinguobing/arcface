@@ -87,7 +87,7 @@ def calculate_roc(distances, labels, thresholds, num_folds=10):
     folds = KFold(n_splits=num_folds, shuffle=False).split(
         np.arange(len(labels)))
 
-    for train_set, test_set in folds:
+    for index, (train_set, test_set) in enumerate(folds):
         _tpr_fold = []
         _fpr_fold = []
         _acc_fold = []
@@ -104,7 +104,7 @@ def calculate_roc(distances, labels, thresholds, num_folds=10):
 
         # Find the best threshold for the current fold.
         best_threshold = thresholds[np.argmax(_acc_fold)]
-        print("Best threshold: {}".format(best_threshold))
+        print(" - Fold {} best threshold: {}".format(index, best_threshold))
 
         # Get the accuracy with the BEST threshold.
         _, _, acc = calculate_accuracy(
