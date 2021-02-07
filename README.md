@@ -143,6 +143,11 @@ Once the model is exported, you can run an evaluation of the model with test dat
 ```bash
 python3 evaluate.py
 ```
+
+After training for 84k steps(ignore the softmax pre-training steps) the prediction accuracy on LFW dataset is `0.9845 ± 0.0022`. Following is the ROC curve figure.
+
+![](docs/roc_Lfw.jpeg)
+
 Check the module code before running. It should not be difficult.
 
 ## Inference
