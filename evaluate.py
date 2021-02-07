@@ -185,11 +185,12 @@ if __name__ == '__main__':
     # Run the evaluations.
     batch_size = 100
     tprs, fprs, acc, std = evaluate(data_set, ai, batch_size)
-    print("{} max accuracy: {:.4f} ± {:.4f}".format(test_set_name, acc, std))
+    print("{} accuracy: {:.4f} ± {:.4f}".format(test_set_name, acc, std))
 
     # Draw the ROC curve.
     plt.plot(fprs, tprs, linewidth=2.0)
     plt.xlabel('False positive rate')
     plt.ylabel('True positive rate')
-    plt.suptitle('ROC of {}'.format(test_set_name))
+    plt.suptitle(
+        '[{}] ROC curve averaged over 10 folds'.format(test_set_name))
     plt.show()
