@@ -152,7 +152,7 @@ if __name__ == "__main__":
         supervisor.override(0, 1)
         print("Training process overridden by user.")
 
-    # Now it is safe to staring training.
+    # Now it is safe to start training.
     supervisor.train(args.epochs, num_examples // args.batch_size)
 
     # Export the model after training.
