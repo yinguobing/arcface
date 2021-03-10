@@ -251,6 +251,8 @@ if __name__ == '__main__':
                 cv2.putText(frame, "{}: {:.2f}".format(label, value), (x1+7, y1-10),
                             cv2.FONT_HERSHEY_DUPLEX, 0.9, (255, 255, 255), 2, cv2.LINE_AA)
 
+        tm.stop()
+
         # Show the result in windows.
         cv2.imshow('image', frame)
 
