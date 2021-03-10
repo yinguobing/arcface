@@ -4,3 +4,6 @@
 [submodule "utils/tfrecord_operator"]
 	path = utils/tfrecord_operator
 	url = https://github.com/yinguobing/tfrecord_operator.git
+[submodule "face_detector"]
+	path = face_detector
+	url = https://github.com/yinguobing/face_detector.git
