@@ -143,13 +143,14 @@ if __name__ == '__main__':
     # Tell the AI to remember these faces.
     faces_to_remember = ["/home/robin/Pictures/wanda.jpg",
                          "/home/robin/Pictures/vision.jpg",
-                         "/home/robin/Pictures/monica.jpg"]
+                         "/home/robin/Pictures/monica.jpg",
+                         "/home/robin/Pictures/agatha.jpg"]
     targets = [_read_in(x) for x in faces_to_remember]
     ai.remember(targets)
 
     # Setup the names and the bounding boxes colors.
-    names = ["Wanda", "Vision", "Monica"]
-    color_palette = [(54, 84, 160), [160, 84, 54], [84, 160, 54]]
+    names = ["Wanda", "Vision", "Monica", "Agatha"]
+    color_palette = [(54, 84, 160), [160, 84, 54], [84, 160, 54], [160, 160, 62]]
 
     # What is the threshold value for face detection.
     threshold = 0.7
@@ -182,13 +183,11 @@ if __name__ == '__main__':
             (frame_width, frame_height))
 
     # Introduce a metter to measure the FPS.
-    tm = cv2.TickMeter()
+    tm_detection = cv2.TickMeter()
+    tm_identification = cv2.TickMeter()
 
     # Loop through the video frames.
     while True:
-        # Start the metter.
-        tm.start()
-
         # Read frame, crop it, flip it, suits your needs.
         frame_got, frame = cap.read()
         if not frame_got:
@@ -201,11 +200,15 @@ if __name__ == '__main__':
         if video_src == 0:
             frame = cv2.flip(frame, 2)
 
+        tm_detection.start()
+
         # Preprocess the input image.
         _image = detector_face.preprocess(frame)
 
         # Run the model
         boxes, _, _ = detector_face.predict(_image, threshold)
+
+        tm_detection.stop()
 
         # Transform the boxes into squares.
         boxes = detector_face.transform_to_square(boxes, 0.9)
@@ -230,8 +233,12 @@ if __name__ == '__main__':
 
             faces = np.array(faces, dtype=np.float32)
 
+            tm_identification.start()
+
             # Do prediction.
             results = ai.identify(faces, 0.9)
+
+            tm_identification.stop()
 
             # Draw the names on image.
             labels = ["Nobody"] * num_boxes
@@ -251,7 +258,11 @@ if __name__ == '__main__':
                 cv2.putText(frame, "{}: {:.2f}".format(label, value), (x1+7, y1-10),
                             cv2.FONT_HERSHEY_DUPLEX, 0.9, (255, 255, 255), 2, cv2.LINE_AA)
 
-        tm.stop()
+        # Draw the FPS on screen.
+        cv2.putText(frame, "Detection:{:.0f} Identification:{:.0f}".format(
+            tm_detection.getAvgTimeMilli(), tm_identification.getAvgTimeMilli()),
+            (10, 30), cv2.FONT_HERSHEY_DUPLEX, 0.8, (255, 255, 255), 1,
+            cv2.LINE_AA)
 
         # Show the result in windows.
         cv2.imshow('image', frame)
