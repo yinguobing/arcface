@@ -7,7 +7,7 @@ from tensorflow import keras
 
 from dataset import build_dataset
 from losses import ArcLoss
-from network import ArcLayer, L2Normalization, hrnet_v2
+from network import ArcLayer, L2Normalization, resnet101
 from training_supervisor import TrainingSupervisor
 
 parser = ArgumentParser()
@@ -31,7 +31,7 @@ if __name__ == "__main__":
     # logs, etc. Modify these paths to suit your needs.
 
     # What is the model's name?
-    name = "hrnetv2"
+    name = "resnetv2_101"
 
     # Where are the training files?
     train_files = "/home/robin/data/face/faces_ms1m-refine-v2_112x112/faces_emore/train.record"
@@ -74,10 +74,10 @@ if __name__ == "__main__":
     # means not only different loss functions but also fragmented models.
 
     # First model is base model which outputs the face embeddings.
-    base_model = hrnet_v2(input_shape=input_shape, output_size=embedding_size,
-                          width=18, trainable=True,
-                          kernel_regularizer=regularizer,
-                          name="embedding_model")
+    base_model = resnet101(input_shape=input_shape, output_size=embedding_size,
+                           trainable=True, training=True,
+                           kernel_regularizer=regularizer,
+                           name="embedding_model")
 
     # Then build the second model for training.
     if args.softmax:

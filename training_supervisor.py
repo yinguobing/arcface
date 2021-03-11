@@ -92,8 +92,8 @@ class TrainingSupervisor(object):
         if latest_checkpoint:
             print("Checkpoint found: {}".format(latest_checkpoint))
         else:
-            print("WARNING: Checkpoint not found. Model will be initialized \
-                from scratch.")
+            print(
+                "WARNING: Checkpoint not found. Model will be initialized from scratch.")
 
         print("Restoring..")
 

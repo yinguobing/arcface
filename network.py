@@ -3,8 +3,6 @@ import tensorflow as tf
 from tensorflow import keras
 from tensorflow.keras import layers
 
-from models.hrnet import hrnet_body
-
 
 class L2Normalization(keras.layers.Layer):
     """This layer normalizes the inputs with l2 normalization."""
@@ -55,70 +53,35 @@ class ArcLayer(keras.layers.Layer):
         return config
 
 
-def hrnet_stem(filters=64, kernel_regularizer=None):
-    """The stem part of the network."""
-    stem_layers = [layers.Conv2D(filters, 3, 2, 'same',
-                                 kernel_regularizer=kernel_regularizer),
-                   layers.BatchNormalization(),
-                   layers.Activation('relu')]
-
-    def forward(x):
-        for layer in stem_layers:
-            x = layer(x)
-        return x
-
-    return forward
-
-
-def hrnet_heads(input_channels=56, output_size=256, kernel_regularizer=None):
-    # Construct up sacling layers.
-    scales = [2, 4, 8]
-    up_scale_layers = [layers.UpSampling2D((s, s)) for s in scales]
-    concatenate_layer = layers.Concatenate(axis=3)
-    heads_layers = [layers.Conv2D(filters=input_channels, kernel_size=(1, 1),
-                                  strides=(1, 1), padding='same',
-                                  kernel_regularizer=kernel_regularizer),
-                    layers.BatchNormalization(),
-                    layers.Activation('relu'),
-                    layers.GlobalAveragePooling2D(),
-                    layers.Dense(output_size,
-                                 kernel_regularizer=kernel_regularizer),
-                    layers.BatchNormalization()]
-
-    def forward(inputs):
-        scaled = [f(x) for f, x in zip(up_scale_layers, inputs[1:])]
-        x = concatenate_layer([inputs[0], scaled[0], scaled[1], scaled[2]])
-        for layer in heads_layers:
-            x = layer(x)
-        return x
-
-    return forward
-
-
-def hrnet_v2(input_shape, output_size, width=18, trainable=True,
-             kernel_regularizer=None, name="hrnetv2"):
-    """This function returns a keras model of HRNetV2.
+def resnet101(input_shape, output_size, trainable=False, training=False,
+              kernel_regularizer=None, name="resnetv2"):
+    """This function returns a keras model of ResNet101.
 
     Args:
         input_shape: the shape of the inputs.
         output_size: size of output nodes. This is considered as the size of the 
             face embeddings.
-        width: the model hyperparameter width.
         trainable: True if the model is open for traning.
 
     Returns:
         a keras model.
     """
-    # Get the output size of the HRNet body.
-    last_stage_width = sum([width * pow(2, n) for n in range(4)])
+    base_model = keras.applications.ResNet101V2(
+        weights=None,
+        input_shape=(112, 112, 3),
+        pooling='avg',
+        include_top=False,)  # Do not include the ImageNet classifier at the top.
+
+    # Freeze the base_model
+    base_model.trainable = trainable
 
     # Describe the model.
-    inputs = keras.Input(input_shape, dtype=tf.float32)
-    x = hrnet_stem(64, kernel_regularizer)(inputs)
-    x = hrnet_body(width, kernel_regularizer)(x)
-    outputs = hrnet_heads(input_channels=last_stage_width,
-                          output_size=output_size,
-                          kernel_regularizer=kernel_regularizer)(x)
+    inputs = keras.Input(input_shape, dtype=tf.uint8)
+    x = tf.cast(inputs, tf.float32)
+    x = tf.keras.applications.resnet_v2.preprocess_input(x)
+    x = base_model(x, training=training)
+    x = keras.layers.Dropout(0.2)(x)  # Regularize with dropout
+    outputs = keras.layers.Dense(output_size)(x)
 
     # Construct the model and return it.
     model = keras.Model(inputs=inputs, outputs=outputs,
@@ -128,7 +91,7 @@ def hrnet_v2(input_shape, output_size, width=18, trainable=True,
 
 
 if __name__ == "__main__":
-    net = hrnet_v2((112, 112, 3), 256)
+    net = resnet((112, 112, 3), 256)
     x = tf.random.uniform((8, 112, 112, 3))
     x = net(x)
     print(x.shape)
