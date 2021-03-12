@@ -285,7 +285,7 @@ class TrainingSupervisor(object):
             export_dir: the direcotry where the model will be saved.
         """
         print("Saving model to {} ...".format(export_dir))
-        model.save(export_dir)
+        model.save(export_dir, include_optimizer=False)
         print("Model saved at: {}".format(export_dir))
 
     def override(self, step=None, epoch=None, monitor_value=None):
