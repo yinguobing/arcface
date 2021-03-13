@@ -103,7 +103,7 @@ if __name__ == "__main__":
 
     # Construct an optimizer. This optimizer is different from the official
     # implementation which use SGD with momentum.
-    optimizer = keras.optimizers.Adam(0.001, amsgrad=True, epsilon=0.001)
+    optimizer = keras.optimizers.Adam(0.1)
 
     # Construct training datasets.
     dataset_train = build_dataset(train_files,

@@ -69,7 +69,7 @@ def resnet101(input_shape, output_size, trainable=False, training=False,
     base_model = keras.applications.ResNet101V2(
         weights=None,
         input_shape=(112, 112, 3),
-        pooling='avg',
+        pooling=None,
         include_top=False,)  # Do not include the ImageNet classifier at the top.
 
     # Freeze the base_model
@@ -80,8 +80,11 @@ def resnet101(input_shape, output_size, trainable=False, training=False,
     x = tf.cast(inputs, tf.float32)
     x = tf.keras.applications.resnet_v2.preprocess_input(x)
     x = base_model(x, training=training)
+    x = keras.layers.BatchNormalization()(x)
     x = keras.layers.Dropout(0.2)(x)  # Regularize with dropout
-    outputs = keras.layers.Dense(output_size)(x)
+    x = keras.layers.Flatten()(x)
+    x = keras.layers.Dense(output_size)(x)
+    outputs = keras.layers.BatchNormalization()(x)
 
     # Construct the model and return it.
     model = keras.Model(inputs=inputs, outputs=outputs,

@@ -239,6 +239,11 @@ class TrainingSupervisor(object):
             progress_bar = tqdm(total=steps_per_epoch, initial=initial_step,
                                 ascii="->", colour='#1cd41c')
 
+            # Skip the samples in dataset.
+            if initial_step > 0:
+                print("Skipping samples..")
+                self.data_generator = iter(self.dataset.skip(initial_step))
+
             # Iterate over the batches of the dataset
             for x_batch, y_batch in self.data_generator:
 
@@ -272,6 +277,9 @@ class TrainingSupervisor(object):
             # Save the last checkpoint.
             self._log_to_tensorboard()
             self._checkpoint()
+
+            # Resnet the initial step.
+            initial_step = 0
 
             # Clean up the progress bar.
             progress_bar.close()
