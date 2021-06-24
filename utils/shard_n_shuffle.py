@@ -107,6 +107,51 @@ def shuffle(record_file, rounds=1, total_samples=None):
         os.remove(temp_pair[0])
 
 
+def shard(record_file, num_shards, shuffle_buffer_size=None):
+    """Shard the record file into N files.
+
+    Args:
+        record_file: the target file to be sharded.
+        num_shards: number of shards.
+    """
+    print("Sharding..")
+    assert num_shards >= 2, "Rounds should be larger than or equal to 2."
+
+    # The output files will be named after the input file with numerical postfix.
+    common_path, _, ext_name = record_file.rpartition('.')
+    output_files = ["{}_{:05d}.{}".format(
+        common_path, i, ext_name) for i in range(num_shards)]
+
+    # Construct TFRecord file writer.
+    writers = [tf.io.TFRecordWriter(output_file)
+               for output_file in output_files]
+
+    # Read in the dataset.
+    dataset = tf.data.TFRecordDataset(record_file)
+
+    # Evenly split the dataset shards.
+    if shuffle_buffer_size:
+        shards = [iter(dataset.shard(num_shards, n).shuffle(shuffle_buffer_size).prefetch(tf.data.experimental.AUTOTUNE))
+                  for n in range(num_shards)]
+    else:
+        shards = [iter(dataset.shard(num_shards, n).prefetch(tf.data.experimental.AUTOTUNE))
+                  for n in range(num_shards)]
+
+    for index, (writer, shard) in enumerate(zip(writers, shards)):
+        while True:
+            try:
+                example = shard.get_next()
+            except Exception:
+                writer.close()
+                # print("Shard [{}] exhausted, left {} shards.".format(
+                #     index, len(shards)-index))
+                break
+            else:
+                writer.write(example.numpy())
+
+    print("All done. Output files:", output_files)
+
+
 if __name__ == "__main__":
     # Where is the TFRecord file to be shuffled?
     record_file = "/home/robin/data/face/faces_ms1m-refine-v2_112x112/faces_emore/train_0.record"
