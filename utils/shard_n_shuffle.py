@@ -143,8 +143,8 @@ def shard(record_file, num_shards, shuffle_buffer_size=None):
                 example = shard.get_next()
             except Exception:
                 writer.close()
-                # print("Shard [{}] exhausted, left {} shards.".format(
-                #     index, len(shards)-index))
+                print("Shard [{}] exhausted, left {} shards.".format(
+                    index, len(shards)-index))
                 break
             else:
                 writer.write(example.numpy())
